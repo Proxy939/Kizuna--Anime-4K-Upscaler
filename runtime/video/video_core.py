@@ -31,24 +31,28 @@ class VideoFrame:
     Represents a single decoded video frame.
     
     Attributes:
-        data: Frame pixel data (H, W, 3) RGB uint8
+        data: Frame pixel data (H, W, 3) RGB uint8 OR None if YUV
         width: Frame width in pixels
         height: Frame height in pixels
         pts: Presentation timestamp (in seconds)
         frame_index: Sequential frame number (0-indexed)
         format: Color format ('rgb24', 'yuv420p', etc.)
+        yuv_data: Optional YUV plane data for GPU-only path
+                  Format: {'y': np.ndarray, 'u': np.ndarray, 'v': np.ndarray}
     """
-    data: np.ndarray
+    data: Optional[np.ndarray]
     width: int
     height: int
     pts: float
     frame_index: int
     format: str = 'rgb24'
+    yuv_data: Optional[dict] = None
     
     def __repr__(self) -> str:
+        yuv_mode = " (YUV)" if self.yuv_data else ""
         return (f"VideoFrame(index={self.frame_index}, "
                 f"size={self.width}×{self.height}, "
-                f"pts={self.pts:.3f}s, format={self.format})")
+                f"pts={self.pts:.3f}s, format={self.format}{yuv_mode})")
 
 
 class VideoDecoder:
@@ -58,13 +62,14 @@ class VideoDecoder:
     Decodes video files to raw RGB frames with timing information.
     """
     
-    def __init__(self, video_path: str, use_hwaccel: bool = True):
+    def __init__(self, video_path: str, use_hwaccel: bool = True, output_yuv: bool = False):
         """
         Initialize video decoder.
         
         Args:
             video_path: Path to video file
             use_hwaccel: Attempt hardware-accelerated decoding (default: True)
+            output_yuv: Output YUV frames for GPU-only path (default: False)
         
         Raises:
             FileNotFoundError: If video file doesn't exist
@@ -72,6 +77,7 @@ class VideoDecoder:
         """
         self.video_path = Path(video_path)
         self.use_hwaccel = use_hwaccel
+        self.output_yuv = output_yuv
         self.hwaccel_backend = None
         
         if not self.video_path.exists():
@@ -108,6 +114,7 @@ class VideoDecoder:
         print(f"[VideoDecoder] FPS: {self.fps:.2f}")
         print(f"[VideoDecoder] Codec: {self.codec}")
         print(f"[VideoDecoder] Decode: {self.hwaccel_backend or 'CPU'}")
+        print(f"[VideoDecoder] Output: {'YUV (GPU-only)' if self.output_yuv else 'RGB'}")
         if self.duration:
             print(f"[VideoDecoder] Duration: {self.duration:.2f}s")
         if self.total_frames:
@@ -201,23 +208,55 @@ class VideoDecoder:
             av_frame: PyAV video frame
         
         Returns:
-            VideoFrame with RGB data
+            VideoFrame with RGB or YUV data
         """
-        # Convert to RGB24
-        rgb_frame = av_frame.to_rgb().to_ndarray()
-        
         # Calculate PTS in seconds
         pts = float(av_frame.pts * self.stream.time_base) if av_frame.pts else 0.0
         
-        # Create VideoFrame
-        video_frame = VideoFrame(
-            data=rgb_frame,
-            width=av_frame.width,
-            height=av_frame.height,
-            pts=pts,
-            frame_index=self.frame_index,
-            format='rgb24'
-        )
+        if self.output_yuv:
+            # GPU-only path: keep as YUV
+            try:
+                # Convert to YUV420p if not already
+                yuv_frame = av_frame.reformat(format='yuv420p')
+                
+                # Extract planes
+                y_plane = np.array(yuv_frame.planes[0])
+                u_plane = np.array(yuv_frame.planes[1])
+                v_plane = np.array(yuv_frame.planes[2])
+                
+                # Create VideoFrame with YUV data
+                video_frame = VideoFrame(
+                    data=None,  # No CPU RGB data
+                    width=av_frame.width,
+                    height=av_frame.height,
+                    pts=pts,
+                    frame_index=self.frame_index,
+                    format='yuv420p',
+                    yuv_data={'y': y_plane, 'u': u_plane, 'v': v_plane}
+                )
+            except Exception as e:
+                print(f"[VideoDecoder] YUV extraction failed: {e}, falling back to RGB")
+                # Fallback to RGB
+                rgb_frame = av_frame.to_rgb().to_ndarray()
+                video_frame = VideoFrame(
+                    data=rgb_frame,
+                    width=av_frame.width,
+                    height=av_frame.height,
+                    pts=pts,
+                    frame_index=self.frame_index,
+                    format='rgb24'
+                )
+        else:
+            # CPU path: convert to RGB24
+            rgb_frame = av_frame.to_rgb().to_ndarray()
+            video_frame = VideoFrame(
+                data=rgb_frame,
+                width=av_frame.width,
+                height=av_frame.height,
+                pts=pts,
+                frame_index=self.frame_index,
+                format='rgb24'
+            )
         
         self.frame_index += 1
         

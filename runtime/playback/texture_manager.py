@@ -91,19 +91,27 @@ class OpenGLTextureUploader(IGPUTextureUploader):
         """
         Upload a video frame to GPU texture.
         
+        Supports both RGB and YUV frames.
+        For YUV frames, returns a special texture ID that references YUV textures.
+        
         Uses PBO double-buffering for zero-copy upload if enabled.
         
         Args:
-            frame: VideoFrame with RGB data
+            frame: VideoFrame with RGB or YUV data
         
         Returns:
-            OpenGL texture ID
+            OpenGL texture ID (RGB) or tuple handle for YUV
         
         Raises:
             RuntimeError: If upload fails
         """
         width, height = frame.width, frame.height
         
+        # Check if this is a YUV frame
+        if frame.yuv_data is not None:
+            return self._upload_yuv_frame(frame)
+        
+        # RGB path (existing logic)
         # Check if PBO needs resize
         if self.pbo_enabled and self.pbo_resolution != (width, height):
             self._resize_pbos(width, height)
@@ -125,6 +133,63 @@ class OpenGLTextureUploader(IGPUTextureUploader):
         self.textures[texture_id] = (width, height)
         
         return texture_id
+    
+    def _upload_yuv_frame(self, frame: VideoFrame) -> int:
+        """
+        Upload YUV frame as separate Y and UV textures.
+        
+        Args:
+            frame: VideoFrame with yuv_data
+        
+        Returns:
+            Texture ID (actually stores YUV texture IDs internally)
+        """
+        try:
+            yuv_data = frame.yuv_data
+            y_plane = yuv_data['y']
+            u_plane = yuv_data['u']
+            v_plane = yuv_data['v']
+            
+            # Create Y texture (full resolution, single channel)
+            y_tex = glGenTextures(1)
+            glBindTexture(GL_TEXTURE_2D, y_tex)
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, frame.width, frame.height, 0,
+                         GL_RED, GL_UNSIGNED_BYTE, y_plane)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+            
+            # Create UV texture (half resolution, two channels)
+            # Combine U and V into RG texture
+            uv_width = frame.width // 2
+            uv_height = frame.height // 2
+            uv_data = np.stack([u_plane, v_plane], axis=-1).astype(np.uint8)
+            
+            uv_tex = glGenTextures(1)
+            glBindTexture(GL_TEXTURE_2D, uv_tex)
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RG8, uv_width, uv_height, 0,
+                         GL_RG, GL_UNSIGNED_BYTE, uv_data)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+            
+            glBindTexture(GL_TEXTURE_2D, 0)
+            
+            # Store YUV texture IDs (use a special registry)
+            # For now, return Y texture ID and store UV internally
+            if not hasattr(self, 'yuv_textures'):
+                self.yuv_textures = {}
+            
+            self.yuv_textures[y_tex] = {'y': y_tex, 'uv': uv_tex}
+            self.textures[y_tex] = (frame.width, frame.height)
+            
+            return y_tex
+            
+        except Exception as e:
+            print(f"[TextureUploader] YUV upload failed: {e}")
+            raise
     
     def _create_texture(self, pixels: np.ndarray, width: int, height: int) -> int:
         """
@@ -353,6 +418,13 @@ class OpenGLTextureUploader(IGPUTextureUploader):
         if all_texture_ids:
             glDeleteTextures(all_texture_ids)
             print(f"[TextureUploader] Deleted {len(all_texture_ids)} textures")
+        
+        # Delete YUV textures if any
+        if hasattr(self, 'yuv_textures'):
+            for yuv_set in self.yuv_textures.values():
+                glDeleteTextures([yuv_set['y'], yuv_set['uv']])
+            print(f"[TextureUploader] Deleted {len(self.yuv_textures)} YUV texture sets")
+            self.yuv_textures = {}
         
         # Delete PBOs
         if self.pbos:
