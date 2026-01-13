@@ -1,0 +1,10 @@
+# KizunaSR Offline Processor - Requirements
+
+# Same as video core + pipeline
+av>=10.0.0              # PyAV for encoding
+numpy>=1.24.0
+Pillow>=10.0.0
+
+# KizunaSR dependencies (reference other modules)
+# scipy>=1.11.0         # For core pipeline
+# matplotlib>=3.7.0     # For core pipeline
