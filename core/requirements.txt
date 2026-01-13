@@ -1,0 +1,13 @@
+# KizunaSR Core Pipeline - Requirements
+
+# Core dependencies (same as AI module)
+numpy>=1.24.0
+scipy>=1.11.0          # For gaussian_filter, convolve2d
+Pillow>=10.0.0
+matplotlib>=3.7.0      # For RGB/HSV conversions
+
+# AI inference (already installed if ai module is used)
+# onnxruntime>=1.16.0
+
+# Optional: For testing
+# pytest>=7.4.0
