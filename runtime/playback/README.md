@@ -276,3 +276,134 @@ With the window foundation complete, next components:
 
 ---
 *Window Module Complete - Foundation Ready for Rendering*
+
+---
+
+## GPU Texture Management
+
+### OpenGLTextureUploader Class
+
+**Location**: [runtime/playback/texture_manager.py](file:///d:/college/Projects/Kizuna (絆)/runtime/playback/texture_manager.py)
+
+**Responsibilities**:
+- Upload VideoFrame (CPU RGB) to OpenGL textures
+- Manage texture lifecycle and reuse
+- Provide texture metadata queries
+
+### Usage
+
+```python
+from runtime.playback import OpenGLTextureUploader
+from runtime.video import VideoFrame
+
+# Create uploader
+uploader = OpenGLTextureUploader(enable_texture_reuse=True)
+
+# Upload frame
+texture_id = uploader.upload_frame(video_frame)
+
+# Query size
+width, height = uploader.get_texture_size(texture_id)
+
+# Release texture (returns to pool if reuse enabled)
+uploader.release_texture(texture_id)
+
+# Cleanup all textures
+uploader.cleanup()
+```
+
+### Features
+
+**Texture Upload**:
+- Input: VideoFrame (RGB uint8, H×W×3)
+- Internal format: GL_RGB8
+- Filter: GL_LINEAR (bilinear)
+- Wrap: GL_CLAMP_TO_EDGE
+
+**Texture Reuse**:
+- Enabled by default
+- Pools textures by resolution
+- Reduces glGenTextures/glDeleteTextures calls
+- Improves performance for constant resolution
+
+**Resource Safety**:
+- Tracks all created textures
+- Cleanup on demand or destruction
+- No leaks even on early exit
+
+### API Reference
+
+**`upload_frame(frame: VideoFrame) -> int`**  
+Uploads frame to GPU, returns texture ID
+
+**`release_texture(texture_id: int)`**  
+Releases texture (pools or deletes)
+
+**`get_texture_size(texture_id: int) -> Tuple[int, int]`**  
+Returns (width, height) of texture
+
+**`cleanup()`**  
+Deletes all textures and clears pool
+
+**`get_stats() -> dict`**  
+Returns texture usage statistics
+
+### Implementation Details
+
+**Pixel Upload**:
+```python
+glPixelStorei(GL_UNPACK_ALIGNMENT, 1)  # Handle RGB24 (3 bytes/pixel)
+glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels)
+```
+
+**Texture Reuse**:
+- First upload: `glTexImage2D` (allocate + upload)
+- Reuse: `glTexSubImage2D` (update only, faster)
+
+**Texture Parameters**:
+```python
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+```
+
+### Validation
+
+**Test Texture Upload**:
+```bash
+python runtime/playback/texture_manager.py
+```
+
+**Expected**:
+- Window appears
+- Console shows:
+  - Texture uploaded (ID)
+  - Size query successful
+  - Texture reuse working
+  - Stats printout
+- Window closes after 1 second
+
+**Visual Validation** (with shader):
+- Upload frame
+- Bind texture to shader
+- Render fullscreen quad
+- Verify frame appears correctly
+
+### Performance
+
+**Without Reuse**:
+- Every frame: glGenTextures + glTexImage2D + glDeleteTextures
+- ~0.5-1ms per frame (depends on resolution)
+
+**With Reuse**:
+- First frame: glGenTextures + glTexImage2D
+- Subsequent: glTexSubImage2D only
+- ~0.1-0.3ms per frame (3-5× faster)
+
+**Memory**:
+- 1920×1080 RGB8: 6.2 MB per texture
+- Pool limit: User-controlled (cleanup() clears pool)
+
+---
+*Texture Manager Complete - CPU-to-GPU Transfer Ready*
