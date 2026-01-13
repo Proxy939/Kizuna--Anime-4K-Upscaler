@@ -15,4 +15,15 @@ This document covers:
 - Explicit non-goals
 
 ## AI Pipeline
-*To be documented in future phases*
+For the complete specification of the local AI inference module, see:
+- **[AI Inference Module Design](ai_inference_module.md)**
+
+This document covers:
+- Local-first execution model (CUDA, DirectML, CPU backends)
+- Input/output tensor contracts
+- Model selection strategy (Real-ESRGAN, SwinIR, compact models)
+- Tile-based inference for memory efficiency
+- Backend abstraction layer
+- Hybrid shader + AI integration
+- Performance profiles (real-time vs export modes)
+- Explicit non-goals (no cloud, no temporal AI, no diffusion)
