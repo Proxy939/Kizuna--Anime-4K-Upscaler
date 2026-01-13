@@ -1,0 +1,8 @@
+# KizunaSR Video Core - Requirements
+
+# FFmpeg Python bindings
+av>=10.0.0              # PyAV: Python bindings for FFmpeg
+numpy>=1.24.0           # For frame data arrays
+
+# Optional: For future optimizations
+# opencv-python>=4.8.0  # Alternative for frame I/O (if needed)
