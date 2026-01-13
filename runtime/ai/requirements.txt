@@ -1,0 +1,14 @@
+# KizunaSR AI Inference Module - Requirements
+
+# Core dependencies
+onnxruntime>=1.16.0        # ONNX Runtime for inference
+onnxruntime-gpu>=1.16.0    # ONNX Runtime with CUDA support (optional, install if NVIDIA GPU)
+numpy>=1.24.0              # Numerical operations
+Pillow>=10.0.0             # Image I/O
+
+# Optional: DirectML support (Windows only)
+# Install via: pip install onnxruntime-directml
+
+# Development dependencies (optional)
+# pytest>=7.4.0            # For testing
+# black>=23.0.0            # Code formatting
