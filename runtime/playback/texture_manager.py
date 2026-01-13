@@ -26,14 +26,16 @@ class OpenGLTextureUploader(IGPUTextureUploader):
     Manages texture lifecycle and reuse.
     """
     
-    def __init__(self, enable_texture_reuse: bool = True):
+    def __init__(self, enable_texture_reuse: bool = True, use_pbo: bool = True):
         """
         Initialize texture uploader.
         
         Args:
             enable_texture_reuse: Reuse textures for same resolution (reduces allocations)
+            use_pbo: Use Pixel Buffer Objects for zero-copy upload (default: True)
         """
         self.enable_texture_reuse = enable_texture_reuse
+        self.use_pbo = use_pbo
         
         # Texture registry: texture_id -> (width, height)
         self.textures: Dict[int, Tuple[int, int]] = {}
@@ -42,13 +44,54 @@ class OpenGLTextureUploader(IGPUTextureUploader):
         # Key: (width, height), Value: list of available texture IDs
         self.texture_pool: Dict[Tuple[int, int], list] = {}
         
+        # PBO state
+        self.pbo_enabled = False
+        self.pbos: list = []  # Double-buffered PBOs
+        self.pbo_index = 0  # Current PBO for upload
+        self.pbo_resolution: Optional[Tuple[int, int]] = None
+        
         print("[TextureUploader] Initialized")
         if enable_texture_reuse:
             print("[TextureUploader] Texture reuse enabled")
+        
+        if use_pbo:
+            self._init_pbos()
+    
+    def _init_pbos(self):
+        """Initialize Pixel Buffer Objects for zero-copy upload."""
+        try:
+            # Create 2 PBOs for double buffering
+            self.pbos = glGenBuffers(2)
+            if isinstance(self.pbos, int):
+                self.pbos = [self.pbos]
+            
+            self.pbo_enabled = True
+            print("[TextureUploader] PBO zero-copy upload enabled")
+            
+        except Exception as e:
+            print(f"[TextureUploader] PBO initialization failed: {e}, using fallback")
+            self.pbo_enabled = False
+            self.pbos = []
+    
+    def _resize_pbos(self, width: int, height: int):
+        """Resize PBOs for new frame resolution."""
+        if not self.pbo_enabled:
+            return
+        
+        buffer_size = width * height * 3  # RGB24
+        
+        for pbo in self.pbos:
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo)
+            glBufferData(GL_PIXEL_UNPACK_BUFFER, buffer_size, None, GL_STREAM_DRAW)
+        
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0)
+        self.pbo_resolution = (width, height)
     
     def upload_frame(self, frame: VideoFrame) -> int:
         """
         Upload a video frame to GPU texture.
+        
+        Uses PBO double-buffering for zero-copy upload if enabled.
         
         Args:
             frame: VideoFrame with RGB data
@@ -60,6 +103,10 @@ class OpenGLTextureUploader(IGPUTextureUploader):
             RuntimeError: If upload fails
         """
         width, height = frame.width, frame.height
+        
+        # Check if PBO needs resize
+        if self.pbo_enabled and self.pbo_resolution != (width, height):
+            self._resize_pbos(width, height)
         
         # Try to reuse texture from pool
         texture_id = None
@@ -113,6 +160,8 @@ class OpenGLTextureUploader(IGPUTextureUploader):
         """
         Upload pixel data to an OpenGL texture.
         
+        Uses PBO for async zero-copy upload if enabled.
+        
         Args:
             texture_id: OpenGL texture ID
             pixels: RGB pixel data (H, W, 3) uint8
@@ -124,41 +173,13 @@ class OpenGLTextureUploader(IGPUTextureUploader):
         glBindTexture(GL_TEXTURE_2D, texture_id)
         
         # Set pixel store parameters (alignment)
-        # Row alignment: OpenGL expects 4-byte aligned rows by default
-        # RGB24 (3 bytes/pixel) may not be 4-byte aligned
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
         
-        if not update:
-            # Initial upload: allocate texture storage
-            glTexImage2D(
-                GL_TEXTURE_2D,      # Target
-                0,                  # Mipmap level
-                GL_RGB8,            # Internal format (8-bit RGB)
-                width,              # Width
-                height,             # Height
-                0,                  # Border (must be 0)
-                GL_RGB,             # Format (input data)
-                GL_UNSIGNED_BYTE,   # Type (uint8)
-                pixels              # Pixel data
-            )
-            
-            # Set texture parameters (only needed once)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+        # Choose upload path: PBO or classic
+        if self.pbo_enabled and len(self.pbos) >= 2:
+            self._upload_via_pbo(texture_id, pixels, width, height, update)
         else:
-            # Update existing texture (faster, no reallocation)
-            glTexSubImage2D(
-                GL_TEXTURE_2D,      # Target
-                0,                  # Mipmap level
-                0, 0,               # Offset (x, y)
-                width,              # Width
-                height,             # Height
-                GL_RGB,             # Format
-                GL_UNSIGNED_BYTE,   # Type
-                pixels              # Pixel data
-            )
+            self._upload_classic(texture_id, pixels, width, height, update)
         
         # Unbind texture
         glBindTexture(GL_TEXTURE_2D, 0)
@@ -167,6 +188,113 @@ class OpenGLTextureUploader(IGPUTextureUploader):
         error = glGetError()
         if error != GL_NO_ERROR:
             raise RuntimeError(f"OpenGL error during texture upload: {error}")
+    
+    def _upload_via_pbo(
+        self,
+        texture_id: int,
+        pixels: np.ndarray,
+        width: int,
+        height: int,
+        update: bool
+    ):
+        """
+        Upload texture using PBO for zero-copy transfer.
+        
+        Double buffering prevents GPU stalls.
+        """
+        buffer_size = width * height * 3
+        
+        # First, bind current PBO and trigger texture upload from it
+        # (This uploads data written in the previous frame)
+        current_pbo = self.pbos[self.pbo_index]
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, current_pbo)
+        
+        if not update:
+            # Initial allocation
+            glTexImage2D(
+                GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0,
+                GL_RGB, GL_UNSIGNED_BYTE, None  # NULL pointer = use PBO
+            )
+            # Set texture parameters
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+        else:
+            # Update texture from PBO
+            glTexSubImage2D(
+                GL_TEXTURE_2D, 0, 0, 0, width, height,
+                GL_RGB, GL_UNSIGNED_BYTE, None  # NULL = use PBO
+            )
+        
+        # Now, switch to next PBO and write new frame data
+        self.pbo_index = (self.pbo_index + 1) % len(self.pbos)
+        next_pbo = self.pbos[self.pbo_index]
+        
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, next_pbo)
+        
+        # Map buffer for writing
+        try:
+            ptr = glMapBufferRange(
+                GL_PIXEL_UNPACK_BUFFER,
+                0,
+                buffer_size,
+                GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT
+            )
+            
+            if ptr:
+                # Copy pixel data into mapped buffer
+                # Ensure pixels are contiguous C-order
+                pixels_flat = np.ascontiguousarray(pixels).flatten()
+                ctypes.memmove(ptr, pixels_flat.ctypes.data, buffer_size)
+                
+                # Unmap buffer
+                glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER)
+            else:
+                # Mapping failed, fall back to classic
+                glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0)
+                self._upload_classic(texture_id, pixels, width, height, update)
+                return
+        
+        except Exception as e:
+            print(f"[TextureUploader] PBO upload failed: {e}, falling back")
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0)
+            self._upload_classic(texture_id, pixels, width, height, update)
+            return
+        
+        # Unbind PBO
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0)
+    
+    def _upload_classic(
+        self,
+        texture_id: int,
+        pixels: np.ndarray,
+        width: int,
+        height: int,
+        update: bool
+    ):
+        """
+        Classic CPU→GPU upload using glTex(Sub)Image2D.
+        
+        Fallback when PBO is unavailable or fails.
+        """
+        if not update:
+            # Initial upload: allocate texture storage
+            glTexImage2D(
+                GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0,
+                GL_RGB, GL_UNSIGNED_BYTE, pixels
+            )
+            # Set texture parameters
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+        else:
+            # Update existing texture
+            glTexSubImage2D(
+                GL_TEXTURE_2D, 0, 0, 0, width, height,
+                GL_RGB, GL_UNSIGNED_BYTE, pixels
+            )
     
     def release_texture(self, texture_id: int):
         """
@@ -215,7 +343,7 @@ class OpenGLTextureUploader(IGPUTextureUploader):
     
     def cleanup(self):
         """
-        Delete all textures and clear pool.
+        Delete all textures, PBOs, and clear pool.
         
         Call this when shutting down or switching videos.
         """
@@ -225,6 +353,16 @@ class OpenGLTextureUploader(IGPUTextureUploader):
         if all_texture_ids:
             glDeleteTextures(all_texture_ids)
             print(f"[TextureUploader] Deleted {len(all_texture_ids)} textures")
+        
+        # Delete PBOs
+        if self.pbos:
+            try:
+                glDeleteBuffers(len(self.pbos), self.pbos)
+                print(f"[TextureUploader] Deleted {len(self.pbos)} PBOs")
+            except:
+                pass
+            self.pbos = []
+            self.pbo_enabled = False
         
         # Clear registries
         self.textures.clear()
