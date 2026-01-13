@@ -1,5 +1,7 @@
 # KizunaSR
 > “A Hybrid Real-Time & AI Upscaling System for Anime”
+Kizuna (絆) = bond / connection
+Meaning: Bond between original art and enhanced output
 
 ## Overview
 **KizunaSR** is a research-grade framework designed to bridge the gap between lightweight, real-time upscaling algorithms (like Anime4K) and heavy, high-fidelity deep learning models. It provides a modular pipeline to orchestrate shader-based processing and AI inference, enabling scalable performance profiles for anime content.
