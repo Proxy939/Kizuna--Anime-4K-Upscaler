@@ -3,8 +3,9 @@
 # Window and OpenGL
 glfw>=2.6.0             # GLFW bindings for window creation
 PyOpenGL>=3.1.7         # OpenGL bindings
-PyOpenGL-accelerate>=3.1.7  # Performance acceleration (optional but recommended)
+PyOpenGL-accelerate>=3.1.7  # Performance acceleration
 
-# Future dependencies (not yet needed)
-# sounddevice>=0.4.6    # Audio playback
-# numpy>=1.24.0         # Already in core
+# Audio
+sounddevice>=0.4.6      # Audio playback
+numpy>=1.24.0           # Audio buffer management
+av>=10.0.0              # Audio decoding
