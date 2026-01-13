@@ -58,27 +58,33 @@ class VideoDecoder:
     Decodes video files to raw RGB frames with timing information.
     """
     
-    def __init__(self, video_path: str):
+    def __init__(self, video_path: str, use_hwaccel: bool = True):
         """
         Initialize video decoder.
         
         Args:
             video_path: Path to video file
+            use_hwaccel: Attempt hardware-accelerated decoding (default: True)
         
         Raises:
             FileNotFoundError: If video file doesn't exist
             ValueError: If container cannot be opened
         """
         self.video_path = Path(video_path)
+        self.use_hwaccel = use_hwaccel
+        self.hwaccel_backend = None
         
         if not self.video_path.exists():
             raise FileNotFoundError(f"Video file not found: {video_path}")
         
-        # Open container
-        try:
-            self.container = av.open(str(self.video_path))
-        except av.AVError as e:
-            raise ValueError(f"Failed to open video: {e}")
+        # Try hardware decode first if requested
+        if use_hwaccel:
+            hwaccel_success = self._try_hwaccel_open()
+            if not hwaccel_success:
+                print("[VideoDecoder] Hardware decode failed, falling back to CPU")
+                self._open_cpu()
+        else:
+            self._open_cpu()
         
         # Get video stream
         self.stream = self.container.streams.video[0]
@@ -101,10 +107,78 @@ class VideoDecoder:
         print(f"[VideoDecoder] Resolution: {self.width}×{self.height}")
         print(f"[VideoDecoder] FPS: {self.fps:.2f}")
         print(f"[VideoDecoder] Codec: {self.codec}")
+        print(f"[VideoDecoder] Decode: {self.hwaccel_backend or 'CPU'}")
         if self.duration:
             print(f"[VideoDecoder] Duration: {self.duration:.2f}s")
         if self.total_frames:
             print(f"[VideoDecoder] Total frames: {self.total_frames}")
+    
+    def _detect_hwaccel_backend(self) -> Optional[str]:
+        """
+        Detect available hardware acceleration backend.
+        
+        Returns:
+            Backend name or None if no hardware accel available
+        """
+        # Try backends in preference order
+        backends = [
+            'cuda',      # NVIDIA NVDEC
+            'd3d11va',   # Windows Direct3D 11
+            'dxva2',     # Windows DirectX Video Acceleration
+            'vaapi',     # Linux VA-API
+            'videotoolbox'  # macOS VideoToolbox
+        ]
+        
+        for backend in backends:
+            if backend in av.codec.hwaccels:
+                return backend
+        
+        return None
+    
+    def _try_hwaccel_open(self) -> bool:
+        """
+        Attempt to open video with hardware acceleration.
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Detect available backend
+            backend = self._detect_hwaccel_backend()
+            
+            if backend is None:
+                print("[VideoDecoder] No hardware decode backends available")
+                return False
+            
+            # Open container with hwaccel
+            options = {'hwaccel': backend}
+            
+            try:
+                self.container = av.open(str(self.video_path), options=options)
+                self.hwaccel_backend = backend.upper()
+                print(f"[VideoDecoder] Using {self.hwaccel_backend} hardware decode")
+                return True
+                
+            except av.AVError as e:
+                print(f"[VideoDecoder] {backend} init failed: {e}")
+                return False
+        
+        except Exception as e:
+            print(f"[VideoDecoder] Hardware decode setup error: {e}")
+            return False
+    
+    def _open_cpu(self):
+        """
+        Open video with CPU decoding (fallback).
+        
+        Raises:
+            ValueError: If container cannot be opened
+        """
+        try:
+            self.container = av.open(str(self.video_path))
+            self.hwaccel_backend = None
+        except av.AVError as e:
+            raise ValueError(f"Failed to open video: {e}")
     
     def __iter__(self) -> Iterator[VideoFrame]:
         """
