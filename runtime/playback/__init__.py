@@ -5,6 +5,7 @@ from .texture_manager import OpenGLTextureUploader
 from .shader_pipeline import ShaderPipelineExecutor
 from .scheduler import FrameScheduler, Clock, SystemClock, AudioClock
 from .audio_player import AudioPlayer
+from .player import Player
 
 __all__ = [
     'PlaybackWindow',
@@ -14,6 +15,7 @@ __all__ = [
     'Clock',
     'SystemClock',
     'AudioClock',
-    'AudioPlayer'
+    'AudioPlayer',
+    'Player'
 ]
 __version__ = '1.0.0-mvp'
