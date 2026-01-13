@@ -39,7 +39,8 @@ class Player:
         video_path: str,
         scale_factor: int = 2,
         use_vsync: bool = True,
-        shader_dir: Optional[str] = None
+        shader_dir: Optional[str] = None,
+        use_yuv_path: bool = False
     ):
         """
         Initialize player.
@@ -49,10 +50,12 @@ class Player:
             scale_factor: Upscaling factor (2 or 4)
             use_vsync: Enable V-sync for smooth playback
             shader_dir: Directory containing GLSL shaders (auto-detected if None)
+            use_yuv_path: Enable GPU-only YUV path (default: False)
         """
         self.video_path = Path(video_path)
         self.scale_factor = scale_factor
         self.use_vsync = use_vsync
+        self.use_yuv_path = use_yuv_path
         
         if not self.video_path.exists():
             raise FileNotFoundError(f"Video file not found: {video_path}")
@@ -83,6 +86,7 @@ class Player:
         print(f"Video:  {self.video_path.name}")
         print(f"Scale:  {scale_factor}×")
         print(f"V-sync: {'ON' if use_vsync else 'OFF'}")
+        print(f"Path:   {'GPU YUV' if use_yuv_path else 'CPU RGB'}")
         print("=" * 70)
     
     def play(self):
@@ -146,7 +150,11 @@ class Player:
         
         # 7. Create video decoder
         print("[Player] Opening video decoder...")
-        self.decoder = VideoDecoder(str(self.video_path))
+        self.decoder = VideoDecoder(
+            str(self.video_path), 
+            use_hwaccel=True,
+            output_yuv=self.use_yuv_path
+        )
         
         # 8. Resize pipeline for input resolution
         self.pipeline.resize(self.decoder.width, self.decoder.height)
@@ -213,12 +221,33 @@ class Player:
             
             if video_frame is not None:
                 # Upload frame to GPU
-                input_texture = self.uploader.upload_frame(video_frame)
+                texture_handle = self.uploader.upload_frame(video_frame)
+                
+                # Determine pipeline inputs based on YUV vs RGB
+                # uploader.upload_frame returns either a single int (RGB) or int (Y) 
+                # but we need UV if it's YUV frame
+                
+                input_tex = texture_handle
+                uv_tex = None
+                
+                # Check if we have YUV textures
+                # Since upload_frame returns just one handle, we need to inspect the frame or uploader
+                # However, VideoFrame has yuv_data
+                
+                if video_frame.yuv_data is not None:
+                    # It's a YUV frame. The handle returned is the Y plane texture ID.
+                    # We need to retrieve the UV plane texture ID.
+                    # The uploader stores this in its yuv_textures dictionary.
+                    # This implies tight coupling, but simpler for now without changing upload_frame signature
+                    if hasattr(self.uploader, 'yuv_textures') and input_tex in self.uploader.yuv_textures:
+                        yuv_set = self.uploader.yuv_textures[input_tex]
+                        uv_tex = yuv_set['uv']
                 
                 # Execute shader pipeline
                 output_texture = self.pipeline.execute(
-                    input_texture,
-                    frame_index=video_frame.frame_index
+                    input_texture_id=input_tex,
+                    frame_index=video_frame.frame_index,
+                    uv_texture_id=uv_tex
                 )
                 
                 # Render output texture to screen
@@ -230,7 +259,7 @@ class Player:
                 self._display_texture(output_texture)
                 
                 # Release input texture back to pool
-                self.uploader.release_texture(input_texture)
+                self.uploader.release_texture(input_tex)
                 
                 frame_count += 1
                 
