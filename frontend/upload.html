@@ -1,23 +1,255 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload - KizunaSR</title>
+    <title>Upload Portal - KizunaSR</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="css/globals.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@200" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            overflow: hidden;
+            background: linear-gradient(180deg, #2d1b4e 0%, #4a2c6b 20%, #7d4a8f 40%, #c67b5c 60%, #f5a855 80%, #ffd966 100%);
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
+            position: relative;
+        }
+        .sky-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080"><defs><linearGradient id="sky" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:%232d1b4e"/><stop offset="40%" style="stop-color:%237d4a8f"/><stop offset="70%" style="stop-color:%23c67b5c"/><stop offset="100%" style="stop-color:%23ffd966"/></linearGradient></defs><rect fill="url(%23sky)" width="1920" height="1080"/></svg>');
+            background-size: cover;
+            z-index: 0;
+        }
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.05) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.05) 3px);
+            pointer-events: none;
+            z-index: 2;
+            opacity: 0.3;
+        }
+        .hud-text {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.1em;
+            opacity: 0.4;
+            color: white;
+        }
+        .portal-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            min-height: 400px;
+            background: radial-gradient(circle at center, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+            border: 1px solid rgba(167, 139, 250, 0.3);
+            border-radius: 20px;
+            backdrop-filter: blur(20px);
+            box-shadow: 
+                0 0 60px rgba(139, 92, 246, 0.4),
+                inset 0 0 60px rgba(139, 92, 246, 0.1);
+            padding: 60px 40px;
+            z-index: 10;
+        }
+        .portal-rings {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 120%;
+            height: 120%;
+            pointer-events: none;
+        }
+        .ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border: 1px dashed rgba(167, 139, 250, 0.2);
+            animation: rotate 60s linear infinite;
+        }
+        .ring:nth-child(1) { width: 100%; height: 100%; }
+        .ring:nth-child(2) { width: 110%; height: 110%; animation-duration: 80s; border-style: solid; opacity: 0.15; }
+        .ring:nth-child(3) { width: 120%; height: 120%; animation-duration: 100s; }
+        @keyframes rotate { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+        .upload-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 24px;
+            background: linear-gradient(135deg, rgba(167, 139, 250, 0.3), rgba(139, 92, 246, 0.5));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 32px rgba(139, 92, 246, 0.4);
+        }
+        .upload-icon svg {
+            width: 32px;
+            height: 32px;
+            fill: white;
+        }
+        .title {
+            font-size: 48px;
+            font-weight: 300;
+            letter-spacing: 0.2em;
+            text-align: center;
+            color: white;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+            text-shadow: 0 0 30px rgba(255,255,255,0.5);
+        }
+        .title strong {
+            font-weight: 700;
+        }
+        .subtitle {
+            font-size: 14px;
+            text-align: center;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 24px;
+            font-weight: 300;
+        }
+        .formats {
+            font-size: 11px;
+            text-align: center;
+            color: rgba(255,255,255,0.4);
+            letter-spacing: 0.15em;
+            font-weight: 300;
+        }
+        .formats span {
+            margin: 0 8px;
+        }
+        .bottom-actions {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 24px;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+        .portal-container:hover .bottom-actions {
+            opacity: 1;
+        }
+        .action-btn {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.6);
+            background: none;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 8px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 4px;
+        }
+        .action-btn:hover {
+            color: white;
+            border-color: rgba(167, 139, 250, 0.6);
+            background: rgba(167, 139, 250, 0.1);
+        }
+        .corner-brackets {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+        .bracket {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+        .bracket-tl { top: 40px; left: 40px; border-right: none; border-bottom: none; }
+        .bracket-tr { top: 40px; right: 40px; border-left: none; border-bottom: none; }
+        .bracket-bl { bottom: 40px; left: 40px; border-right: none; border-top: none; }
+        .bracket-br { bottom: 40px; right: 40px; border-left: none; border-top: none; }
+        .side-rail {
+            position: fixed;
+            font-family: 'Space Mono', monospace;
+            font-size: 9px;
+            letter-spacing: 0.2em;
+            color: rgba(255,255,255,0.25);
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            z-index: 5;
+        }
+        .rail-left { left: 20px; top: 50%; transform: translateY(-50%); }
+        .rail-right { right: 20px; top: 50%; transform: translateY(-50%); }
+        input[type="file"] {
+            display: none;
+        }
+        .upload-label {
+            cursor: pointer;
+            display: block;
+        }
+    </style>
 </head>
-
-<body class="bg-black min-h-screen flex items-center justify-center">
-
-    <!-- Placeholder Upload Screen -->\n <div class=\"text-center space-y-8\">\n <div class=\"text-cyan-400 text-sm
-            tracking-[0.3em] uppercase\">Upload Interface</div>\n \n <h1 class=\"text-6xl font-black text-white\">\n
-            Coming <span class=\"text-magenta-500\" style=\"color: #ff0088;\">Soon</span>\n </h1>\n \n <p
-            class=\"text-white/60 text-xl max-w-2xl mx-auto\">\n Upload interface will be activated next\n </p>\n \n
-        <div class=\"pt-8\">\n <a href=\"index.html\" class=\"inline-block bg-cyan-500 hover:bg-cyan-400 text-black
-                font-bold py-4 px-8 transition-all duration-300\" style=\"background: #00aaff;\">\n ← Back to Home\n
-            </a>\n </div>\n </div>\n\n
-</body>\n
-
+<body>
+    <div class="sky-background"></div>
+    <div class="scanlines"></div>
+    
+    <div class="hud-text" style="position: fixed; top: 32px; left: 32px; z-index: 20;">
+        TERMINAL ACCESS: ACTIVE<br>
+        SESSION ID: ANM-7742
+    </div>
+    
+    <div class="corner-brackets">
+        <div class="bracket bracket-tl"></div>
+        <div class="bracket bracket-tr"></div>
+        <div class="bracket bracket-bl"></div>
+        <div class="bracket bracket-br"></div>
+    </div>
+    
+    <div class="side-rail rail-left">座標系 / COORDINATE SYSTEM</div>
+    <div class="side-rail rail-right">バッファ正常 / BUFFER HEALTHY</div>
+    
+    <div class="portal-container">
+        <div class="portal-rings">
+            <div class="ring"></div>
+            <div class="ring"></div>
+            <div class="ring"></div>
+        </div>
+        
+        <label for="file-input" class="upload-label">
+            <div class="upload-icon">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+                </svg>
+            </div>
+            
+            <h1 class="title">UPLOAD <strong>PORTAL</strong></h1>
+            
+            <p class="subtitle">Feed your digital soul to the cloud.</p>
+            
+            <p class="formats">
+                <span>JPEG</span>•<span>PNG</span>•<span>MP4</span>•<span>WEBP</span>•<span>MAX 512MB</span>
+            </p>
+        </label>
+        
+        <input type="file" id="file-input" accept="image/jpeg,image/png,video/mp4,image/webp">
+        
+        <div class="bottom-actions">
+            <button class="action-btn" onclick="window.location.href='index.html'">← Collection</button>
+            <button class="action-btn">History</button>
+            <button class="action-btn">Tweak →</button>
+        </div>
+    </div>
+</body>
 </html>
