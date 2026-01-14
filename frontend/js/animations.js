@@ -118,6 +118,36 @@ function initScrollAnimations() {
             scrub: true
         }
     });
+
+    // Multiverse Section Entrance Animations
+    gsap.set('.card-tilt', { opacity: 0, y: 100, rotateX: -30 });
+
+    gsap.to('.card-tilt', {
+        opacity: 1,
+        y: 0,
+        rotateX: 0,
+        stagger: 0.2,
+        duration: 1,
+        ease: 'power3.out',
+        scrollTrigger: {
+            trigger: '#multiverse',
+            start: 'top 60%',
+            toggleActions: 'play none none reverse'
+        }
+    });
+
+    // Multiverse title entrance
+    gsap.from('#multiverse h2', {
+        opacity: 0,
+        y: 50,
+        duration: 1,
+        ease: 'power2.out',
+        scrollTrigger: {
+            trigger: '#multiverse',
+            start: 'top 70%',
+            toggleActions: 'play none none reverse'
+        }
+    });
 }
 
 // Cursor glow effect

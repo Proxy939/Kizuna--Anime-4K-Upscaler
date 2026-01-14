@@ -80,3 +80,36 @@ body::before {
     pointer-events: none;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
 }
+
+/* Multiverse Section Cards */
+.card-tilt {
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+    filter: drop-shadow(0 25px 50px rgba(0, 0, 0, 0.5));
+}
+
+.card-tilt:hover {
+    transform: translateY(-10px) scale(1.02) !important;
+    filter: drop-shadow(0 30px 60px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 30px rgba(255, 0, 136, 0.3));
+}
+
+/* Neon border glow */
+.border-magenta-500 {
+    box-shadow: 0 0 20px rgba(255, 0, 136, 0.4),
+        inset 0 0 20px rgba(255, 0, 136, 0.1);
+}
+
+.border-yellow-400 {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4),
+        inset 0 0 20px rgba(255, 215, 0, 0.1);
+}
+
+/* Section spacing */
+#multiverse {
+    perspective: 1000px;
+}
+
+/* Smooth section transitions */
+section {
+    scroll-snap-align: start;
+}
