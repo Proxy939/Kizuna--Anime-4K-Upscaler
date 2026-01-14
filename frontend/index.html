@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANIME - KizunaSR</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+    <link rel="stylesheet" href="css/globals.css">
+</head>
+
+<body class="bg-black overflow-x-hidden">
+
+    <!-- Top Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-8 py-6">
+        <div class="text-white text-xl font-bold tracking-wider">ANIME</div>
+        <div class="flex gap-4 items-center">
+            <button class="w-2 h-2 rounded-full bg-white/30"></button>
+        </div>
+    </nav>
+
+    <!-- Message Controller (Top Right) -->
+    <div class="fixed top-6 right-8 z-50 text-white/60 text-xs font-mono">
+        <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-white/30"></div>
+            <span>MESSAGE CONTROLLER</span>
+        </div>
+        <div class="mt-2 flex gap-4 text-[10px]">
+            <span>EN</span>
+            <span>JPN</span>
+            <span class="text-white">AR</span>
+            <span>FR</span>
+        </div>
+    </div>
+
+    <!-- Main Canvas for Three.js Background -->
+    <canvas id="bgCanvas" class="fixed top-0 left-0 w-full h-full z-0"></canvas>
+
+    <!-- Hero Section -->
+    <section id="hero" class="relative min-h-screen flex items-center justify-center">
+
+        <!-- Central Pyramid Portal -->
+        <div id="portal-container" class="absolute inset-0 flex items-center justify-center">
+            <canvas id="portalCanvas" class="w-full h-full"></canvas>
+        </div>
+
+        <!-- Main Title -->
+        <div id="main-title" class="relative z-10 flex items-center justify-center">
+            <h1 class="text-[20vw] font-black text-white tracking-tighter leading-none select-none">
+                <span class="inline-block title-letter" data-char="A">A</span><span class="inline-block title-letter"
+                    data-char="N">N</span><span class="inline-block title-letter pyramid-letter"
+                    data-char="I">I</span><span class="inline-block title-letter" data-char="M">M</span><span
+                    class="inline-block title-letter" data-char="E">E</span>
+            </h1>
+        </div>
+
+        <!-- Anime Facts Panel (Bottom Right) -->
+        <div class="fixed bottom-8 right-8 z-40 bg-black/80 border border-white/10 backdrop-blur-sm p-6 max-w-sm">
+            <h3 class="text-white text-xl font-bold mb-4 tracking-wider">ANIME FACTS</h3>
+            <div class="text-white/70 text-sm space-y-3 leading-relaxed">
+                <p>Origin: Japan, early 20th century</p>
+                <p>Global Phenomenon: Over 6% animated TV shows worldwide</p>
+                <ul class="list-disc list-inside space-y-1 mt-3">
+                    <li>Genres: Mecha, Isekai, Shojo, Shōnen, Ghibli-style Fantasy</li>
+                    <li>Pop culture, art, fashion, technology</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Bottom Left Controls -->
+        <div class="fixed bottom-8 left-8 z-40 font-mono text-white/50 text-xs space-y-2">
+            <div>Neuralcore Material</div>
+            <div class="flex gap-8">
+                <div>
+                    <div class="text-white/30">Progressive</div>
+                    <div class="flex items-center gap-2 mt-1">
+                        <div class="w-12 h-1 bg-white/20"></div>
+                        <span>0.13</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="text-white/30">Metallic</div>
+                    <div class="flex items-center gap-2 mt-1">
+                        <div class="w-12 h-1 bg-white/20"></div>
+                        <span>14.3</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-4 mt-3">
+                <div class="text-white/30">Color</div>
+                <div class="flex gap-2">
+                    <div class="w-4 h-4 bg-white border border-white/30"></div>
+                    <span class="text-[10px]">R:255, G:238, B:01</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reset Guidelines (Bottom Right Corner) -->
+        <div class="fixed bottom-8 right-8 z-30 text-white/40 text-xs font-mono mb-20">
+            Reset Guidelines
+        </div>
+
+    </section>
+
+    <!-- Scripts -->
+    <script src="js/background.js"></script>
+    <script src="js/portal.js"></script>
+    <script src="js/animations.js"></script>
+    <script src="js/main.js"></script>
+
+</body>
+
+</html>
