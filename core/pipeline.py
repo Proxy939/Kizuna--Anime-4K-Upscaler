@@ -144,7 +144,7 @@ class KizunaSRPipeline:
             )
             
             # AI upscaling
-    upscaled_pil = self.ai_engine.upscale(intermediate_img)
+            upscaled_pil = self.ai_engine.upscale(intermediate_img)
             upscaled = np.array(upscaled_pil).astype(np.float32) / 255.0
             
         else:
