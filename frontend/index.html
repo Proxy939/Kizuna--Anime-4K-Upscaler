@@ -19,7 +19,7 @@
     <link rel="stylesheet" href="css/globals.css">
 </head>
 
-<body class="bg-black overflow-x-hidden">
+<body class="bg-black overflow-x-hidden" style="scroll-behavior: smooth; scroll-snap-type: y mandatory;">
 
     <!-- Top Navigation -->
     <nav class="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-8 py-6">
@@ -47,7 +47,7 @@
     <canvas id="bgCanvas" class="fixed top-0 left-0 w-full h-full z-0"></canvas>
 
     <!-- Hero Section -->
-    <section id="hero" class="relative min-h-screen flex items-center justify-center">
+    <section id="hero" class="relative min-h-screen flex items-center justify-center" style="scroll-snap-align: start;">
 
         <!-- Central Pyramid Portal -->
         <div id="portal-container" class="absolute inset-0 flex items-center justify-center">
@@ -113,7 +113,8 @@
     </section>
 
     <!-- Scroll-Down Multiverse Section - ABSTRACT EDITORIAL ONLY -->
-    <section id="multiverse" class="relative min-h-screen flex items-center justify-center py-32">
+    <section id="multiverse" class="relative flex items-center justify-center py-32"
+        style="scroll-snap-align: start; min-height: 100vh; padding-bottom: 200px;">
 
         <!-- Ambient Character Panels (Side UI Anchors) -->
         <!-- Left: Anime Girl - Elegant Portrait -->
@@ -210,12 +211,12 @@
                         <p class="text-white/60 text-sm leading-relaxed mb-4">Built for the enthusiasts who breathe the
                             aesthetic. This is not just a site, it is a universe in motion.</p>
                         <div class="flex gap-3">
-                            <a href="#" onclick="navigateToUpload(event)"
+                            <a href="#upload-portal"
                                 class="flex-1 bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-3 px-4 text-center transition-all duration-300"
                                 style="background: #00aaff;">
                                 Upload Image
                             </a>
-                            <a href="#" onclick="navigateToUpload(event)"
+                            <a href="#upload-portal"
                                 class="flex-1 bg-magenta-500 hover:bg-magenta-400 text-white font-bold py-3 px-4 text-center transition-all duration-300"
                                 style="background: #ff0088;">
                                 Upload Video
@@ -233,35 +234,145 @@
 
     </section>
 
+    <!-- Upload Portal Section (Screen 3) -->
+    <section id="upload-portal" class="relative min-h-screen flex items-center justify-center"
+        style="scroll-snap-align: start; background: linear-gradient(180deg, #2d1b4e 0%, #4a2c6b 20%, #7d4a8f 40%, #c67b5c 60%, #f5a855 80%, #ffd966 100%);">
+
+        <!-- Scanlines overlay -->
+        <div
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: repeating-linear-gradient(0deg, rgba(0,0,0,0.05) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.05) 3px); pointer-events: none; z-index: 2; opacity: 0.3;">
+        </div>
+
+        <!-- HUD Text (top left) -->
+        <div
+            style="position: absolute; top: 32px; left: 32px; z-index: 20; font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 0.1em; opacity: 0.4; color: white;">
+            TERMINAL ACCESS: ACTIVE<br>
+            SESSION ID: ANM-7742
+        </div>
+
+        <!-- Corner brackets -->
+        <div style="position: absolute; width: 100%; height: 100%; pointer-events: none; z-index: 5;">
+            <div
+                style="position: absolute; top: 40px; left: 40px; width: 80px; height: 80px; border: 1px solid rgba(255,255,255,0.15); border-right: none; border-bottom: none;">
+            </div>
+            <div
+                style="position: absolute; top: 40px; right: 40px; width: 80px; height: 80px; border: 1px solid rgba(255,255,255,0.15); border-left: none; border-bottom: none;">
+            </div>
+            <div
+                style="position: absolute; bottom: 40px; left: 40px; width: 80px; height: 80px; border: 1px solid rgba(255,255,255,0.15); border-right: none; border-top: none;">
+            </div>
+            <div
+                style="position: absolute; bottom: 40px; right: 40px; width: 80px; height: 80px; border: 1px solid rgba(255,255,255,0.15); border-left: none; border-top: none;">
+            </div>
+        </div>
+
+        <!-- Side rails -->
+        <div
+            style="position: absolute; left: 20px; top: 50%; transform: translateY(-50%); font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 0.2em; color: rgba(255,255,255,0.25); writing-mode: vertical-rl; text-orientation: mixed; z-index: 5;">
+            座標系 / COORDINATE SYSTEM</div>
+        <div
+            style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 0.2em; color: rgba(255,255,255,0.25); writing-mode: vertical-rl; text-orientation: mixed; z-index: 5;">
+            バッファ正常 / BUFFER HEALTHY</div>
+
+        <!-- Portal Container with Glass Effect -->
+        <div id="upload-portal-container"
+            style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 600px; min-height: 400px; background: radial-gradient(circle at center, rgba(139, 92, 246, 0.15) 0%, transparent 70%); border: 1px solid rgba(167, 139, 250, 0.3); border-radius: 20px; backdrop-filter: blur(20px); box-shadow: 0 0 60px rgba(139, 92, 246, 0.4), inset 0 0 60px rgba(139, 92, 246, 0.1); padding: 60px 40px; z-index: 10;">
+
+            <!-- Animated Concentric Rings -->
+            <div
+                style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 120%; height: 120%; pointer-events: none;">
+                <div
+                    style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; height: 100%; border-radius: 50%; border: 1px dashed rgba(167, 139, 250, 0.2); animation: rotate-ring 60s linear infinite;">
+                </div>
+                <div
+                    style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 110%; height: 110%; border-radius: 50%; border: 1px solid rgba(167, 139, 250, 0.15); animation: rotate-ring 80s linear infinite;">
+                </div>
+                <div
+                    style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 120%; height: 120%; border-radius: 50%; border: 1px dashed rgba(167, 139, 250, 0.2); animation: rotate-ring 100s linear infinite;">
+                </div>
+            </div>
+
+            <!-- Upload Icon -->
+            <label for="file-input" style="cursor: pointer; display: block;">
+                <div
+                    style="width: 64px; height: 64px; margin: 0 auto 24px; background: linear-gradient(135deg, rgba(167, 139, 250, 0.3), rgba(139, 92, 246, 0.5)); border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 32px rgba(139, 92, 246, 0.4);">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
+                        style="width: 32px; height: 32px; fill: white;">
+                        <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z" />
+                    </svg>
+                </div>
+
+                <!-- Title -->
+                <h1
+                    style="font-size: 48px; font-weight: 300; letter-spacing: 0.2em; text-align: center; color: white; text-transform: uppercase; margin-bottom: 16px; text-shadow: 0 0 30px rgba(255,255,255,0.5); font-family: 'Space Grotesk', sans-serif;">
+                    UPLOAD <strong style="font-weight: 700;">PORTAL</strong>
+                </h1>
+
+                <!-- Subtitle -->
+                <p
+                    style="font-size: 14px; text-align: center; color: rgba(255,255,255,0.6); margin-bottom: 24px; font-weight: 300; font-family: 'Space Grotesk', sans-serif;">
+                    Feed your digital soul to the cloud.
+                </p>
+
+                <!-- File Formats -->
+                <p
+                    style="font-size: 11px; text-align: center; color: rgba(255,255,255,0.4); letter-spacing: 0.15em; font-weight: 300; font-family: 'Space Grotesk', sans-serif;">
+                    <span style="margin: 0 8px;">JPEG</span>•<span style="margin: 0 8px;">PNG</span>•<span
+                        style="margin: 0 8px;">MP4</span>•<span style="margin: 0 8px;">WEBP</span>•<span
+                        style="margin: 0 8px;">MAX 512MB</span>
+                </p>
+            </label>
+
+            <!-- Bottom Action Buttons (Hidden, Appear on Hover) -->
+            <div id="bottom-actions"
+                style="position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 24px; opacity: 0; transition: opacity 0.4s ease;">
+                <button
+                    style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.6); background: none; border: 1px solid rgba(255,255,255,0.2); padding: 8px 20px; cursor: pointer; transition: all 0.3s ease; border-radius: 4px;"
+                    onmouseover="this.style.color='white'; this.style.borderColor='rgba(167, 139, 250, 0.6)'; this.style.background='rgba(167, 139, 250, 0.1)';"
+                    onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.borderColor='rgba(255,255,255,0.2)'; this.style.background='none';">
+                    Collection
+                </button>
+                <button
+                    style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.6); background: none; border: 1px solid rgba(255,255,255,0.2); padding: 8px 20px; cursor: pointer; transition: all 0.3s ease; border-radius: 4px;"
+                    onmouseover="this.style.color='white'; this.style.borderColor='rgba(167, 139, 250, 0.6)'; this.style.background='rgba(167, 139, 250, 0.1)';"
+                    onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.borderColor='rgba(255,255,255,0.2)'; this.style.background='none';">
+                    History
+                </button>
+                <button
+                    style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.6); background: none; border: 1px solid rgba(255,255,255,0.2); padding: 8px 20px; cursor: pointer; transition: all 0.3s ease; border-radius: 4px;"
+                    onmouseover="this.style.color='white'; this.style.borderColor='rgba(167, 139, 250, 0.6)'; this.style.background='rgba(167, 139, 250, 0.1)';"
+                    onmouseout="this.style.color='rgba(255,255,255,0.6)'; this.style.borderColor='rgba(255,255,255,0.2)'; this.style.background='none';">
+                    Tweak
+                </button>
+            </div>
+
+            <input type="file" id="file-input" accept="image/jpeg,image/png,video/mp4,image/webp"
+                style="display: none;">
+        </div>
+
+        <style>
+            @keyframes rotate-ring {
+                from {
+                    transform: translate(-50%, -50%) rotate(0deg);
+                }
+
+                to {
+                    transform: translate(-50%, -50%) rotate(360deg);
+                }
+            }
+
+            #upload-portal-container:hover #bottom-actions {
+                opacity: 1;
+            }
+        </style>
+
+    </section>
+
     <!-- Scripts -->
     <script src="js/background.js"></script>
     <script src="js/portal.js"></script>
     <script src="js/animations.js"></script>
     <script src="js/main.js"></script>
-
-    <!-- Page Transition Overlay -->
-    <div id="page-transition"
-        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, rgba(139, 92, 246, 0.9) 0%, #000 100%); z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.6s ease-in-out, transform 0.6s ease-in-out; transform: scale(0.95);">
-    </div>
-
-    <script>
-        function navigateToUpload(e) {
-            e.preventDefault();
-            const overlay = document.getElementById('page-transition');
-            overlay.style.opacity = '1';
-            overlay.style.transform = 'scale(1)';
-            overlay.style.pointerEvents = 'all';
-            setTimeout(() => {
-                window.location.href = 'upload.html';
-            }, 600);
-        }
-        // Keyboard support
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && document.activeElement.onclick === navigateToUpload) {
-                navigateToUpload(e);
-            }
-        });
-    </script>
 
 </body>
 
