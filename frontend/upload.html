@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,10 +8,17 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@200" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Space Grotesk', sans-serif;
             overflow: hidden;
@@ -19,27 +27,31 @@
             background-repeat: no-repeat;
             position: relative;
         }
+
         .sky-background {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080"><defs><linearGradient id="sky" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:%232d1b4e"/><stop offset="40%" style="stop-color:%237d4a8f"/><stop offset="70%" style="stop-color:%23c67b5c"/><stop offset="100%" style="stop-color:%23ffd966"/></linearGradient></defs><rect fill="url(%23sky)" width="1920" height="1080"/></svg>');
+            background-image: url('sunset-bg.png');
             background-size: cover;
+            background-position: center;
             z-index: 0;
         }
+
         .scanlines {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.05) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.05) 3px);
+            background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.05) 0px, transparent 1px, transparent 2px, rgba(0, 0, 0, 0.05) 3px);
             pointer-events: none;
             z-index: 2;
             opacity: 0.3;
         }
+
         .hud-text {
             font-family: 'Space Mono', monospace;
             font-size: 10px;
@@ -47,6 +59,7 @@
             opacity: 0.4;
             color: white;
         }
+
         .portal-container {
             position: absolute;
             top: 50%;
@@ -58,12 +71,13 @@
             border: 1px solid rgba(167, 139, 250, 0.3);
             border-radius: 20px;
             backdrop-filter: blur(20px);
-            box-shadow: 
+            box-shadow:
                 0 0 60px rgba(139, 92, 246, 0.4),
                 inset 0 0 60px rgba(139, 92, 246, 0.1);
             padding: 60px 40px;
             z-index: 10;
         }
+
         .portal-rings {
             position: absolute;
             top: 50%;
@@ -73,6 +87,7 @@
             height: 120%;
             pointer-events: none;
         }
+
         .ring {
             position: absolute;
             top: 50%;
@@ -82,10 +97,36 @@
             border: 1px dashed rgba(167, 139, 250, 0.2);
             animation: rotate 60s linear infinite;
         }
-        .ring:nth-child(1) { width: 100%; height: 100%; }
-        .ring:nth-child(2) { width: 110%; height: 110%; animation-duration: 80s; border-style: solid; opacity: 0.15; }
-        .ring:nth-child(3) { width: 120%; height: 120%; animation-duration: 100s; }
-        @keyframes rotate { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+        .ring:nth-child(1) {
+            width: 100%;
+            height: 100%;
+        }
+
+        .ring:nth-child(2) {
+            width: 110%;
+            height: 110%;
+            animation-duration: 80s;
+            border-style: solid;
+            opacity: 0.15;
+        }
+
+        .ring:nth-child(3) {
+            width: 120%;
+            height: 120%;
+            animation-duration: 100s;
+        }
+
+        @keyframes rotate {
+            from {
+                transform: translate(-50%, -50%) rotate(0deg);
+            }
+
+            to {
+                transform: translate(-50%, -50%) rotate(360deg);
+            }
+        }
+
         .upload-icon {
             width: 64px;
             height: 64px;
@@ -97,11 +138,13 @@
             justify-content: center;
             box-shadow: 0 8px 32px rgba(139, 92, 246, 0.4);
         }
+
         .upload-icon svg {
             width: 32px;
             height: 32px;
             fill: white;
         }
+
         .title {
             font-size: 48px;
             font-weight: 300;
@@ -110,28 +153,33 @@
             color: white;
             text-transform: uppercase;
             margin-bottom: 16px;
-            text-shadow: 0 0 30px rgba(255,255,255,0.5);
+            text-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
         }
+
         .title strong {
             font-weight: 700;
         }
+
         .subtitle {
             font-size: 14px;
             text-align: center;
-            color: rgba(255,255,255,0.6);
+            color: rgba(255, 255, 255, 0.6);
             margin-bottom: 24px;
             font-weight: 300;
         }
+
         .formats {
             font-size: 11px;
             text-align: center;
-            color: rgba(255,255,255,0.4);
+            color: rgba(255, 255, 255, 0.4);
             letter-spacing: 0.15em;
             font-weight: 300;
         }
+
         .formats span {
             margin: 0 8px;
         }
+
         .bottom-actions {
             position: absolute;
             bottom: 40px;
@@ -142,27 +190,31 @@
             opacity: 0;
             transition: opacity 0.4s ease;
         }
+
         .portal-container:hover .bottom-actions {
             opacity: 1;
         }
+
         .action-btn {
             font-family: 'Space Mono', monospace;
             font-size: 11px;
             letter-spacing: 0.1em;
             text-transform: uppercase;
-            color: rgba(255,255,255,0.6);
+            color: rgba(255, 255, 255, 0.6);
             background: none;
-            border: 1px solid rgba(255,255,255,0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             padding: 8px 20px;
             cursor: pointer;
             transition: all 0.3s ease;
             border-radius: 4px;
         }
+
         .action-btn:hover {
             color: white;
             border-color: rgba(167, 139, 250, 0.6);
             background: rgba(167, 139, 250, 0.1);
         }
+
         .corner-brackets {
             position: fixed;
             width: 100%;
@@ -170,81 +222,120 @@
             pointer-events: none;
             z-index: 5;
         }
+
         .bracket {
             position: absolute;
             width: 80px;
             height: 80px;
-            border: 1px solid rgba(255,255,255,0.15);
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
-        .bracket-tl { top: 40px; left: 40px; border-right: none; border-bottom: none; }
-        .bracket-tr { top: 40px; right: 40px; border-left: none; border-bottom: none; }
-        .bracket-bl { bottom: 40px; left: 40px; border-right: none; border-top: none; }
-        .bracket-br { bottom: 40px; right: 40px; border-left: none; border-top: none; }
+
+        .bracket-tl {
+            top: 40px;
+            left: 40px;
+            border-right: none;
+            border-bottom: none;
+        }
+
+        .bracket-tr {
+            top: 40px;
+            right: 40px;
+            border-left: none;
+            border-bottom: none;
+        }
+
+        .bracket-bl {
+            bottom: 40px;
+            left: 40px;
+            border-right: none;
+            border-top: none;
+        }
+
+        .bracket-br {
+            bottom: 40px;
+            right: 40px;
+            border-left: none;
+            border-top: none;
+        }
+
         .side-rail {
             position: fixed;
             font-family: 'Space Mono', monospace;
             font-size: 9px;
             letter-spacing: 0.2em;
-            color: rgba(255,255,255,0.25);
+            color: rgba(255, 255, 255, 0.25);
             writing-mode: vertical-rl;
             text-orientation: mixed;
             z-index: 5;
         }
-        .rail-left { left: 20px; top: 50%; transform: translateY(-50%); }
-        .rail-right { right: 20px; top: 50%; transform: translateY(-50%); }
+
+        .rail-left {
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .rail-right {
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
         input[type="file"] {
             display: none;
         }
+
         .upload-label {
             cursor: pointer;
             display: block;
         }
     </style>
 </head>
+
 <body>
     <div class="sky-background"></div>
     <div class="scanlines"></div>
-    
+
     <div class="hud-text" style="position: fixed; top: 32px; left: 32px; z-index: 20;">
         TERMINAL ACCESS: ACTIVE<br>
         SESSION ID: ANM-7742
     </div>
-    
+
     <div class="corner-brackets">
         <div class="bracket bracket-tl"></div>
         <div class="bracket bracket-tr"></div>
         <div class="bracket bracket-bl"></div>
         <div class="bracket bracket-br"></div>
     </div>
-    
+
     <div class="side-rail rail-left">座標系 / COORDINATE SYSTEM</div>
     <div class="side-rail rail-right">バッファ正常 / BUFFER HEALTHY</div>
-    
+
     <div class="portal-container">
         <div class="portal-rings">
             <div class="ring"></div>
             <div class="ring"></div>
             <div class="ring"></div>
         </div>
-        
+
         <label for="file-input" class="upload-label">
             <div class="upload-icon">
                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+                    <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z" />
                 </svg>
             </div>
-            
+
             <h1 class="title">UPLOAD <strong>PORTAL</strong></h1>
-            
+
             <p class="subtitle">Feed your digital soul to the cloud.</p>
-            
+
             <p class="formats">
                 <span>JPEG</span>•<span>PNG</span>•<span>MP4</span>•<span>WEBP</span>•<span>MAX 512MB</span>
             </p>
         </label>
-        
+
         <input type="file" id="file-input" accept="image/jpeg,image/png,video/mp4,image/webp">
-        
+
         <div class="bottom-actions">
             <button class="action-btn" onclick="window.location.href='index.html'">← Collection</button>
             <button class="action-btn">History</button>
@@ -252,4 +343,5 @@
         </div>
     </div>
 </body>
+
 </html>

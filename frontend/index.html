@@ -210,12 +210,12 @@
                         <p class="text-white/60 text-sm leading-relaxed mb-4">Built for the enthusiasts who breathe the
                             aesthetic. This is not just a site, it is a universe in motion.</p>
                         <div class="flex gap-3">
-                            <a href="upload.html"
+                            <a href="#" onclick="navigateToUpload(event)"
                                 class="flex-1 bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-3 px-4 text-center transition-all duration-300"
                                 style="background: #00aaff;">
                                 Upload Image
                             </a>
-                            <a href="upload.html"
+                            <a href="#" onclick="navigateToUpload(event)"
                                 class="flex-1 bg-magenta-500 hover:bg-magenta-400 text-white font-bold py-3 px-4 text-center transition-all duration-300"
                                 style="background: #ff0088;">
                                 Upload Video
@@ -238,6 +238,30 @@
     <script src="js/portal.js"></script>
     <script src="js/animations.js"></script>
     <script src="js/main.js"></script>
+
+    <!-- Page Transition Overlay -->
+    <div id="page-transition"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, rgba(139, 92, 246, 0.9) 0%, #000 100%); z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.6s ease-in-out, transform 0.6s ease-in-out; transform: scale(0.95);">
+    </div>
+
+    <script>
+        function navigateToUpload(e) {
+            e.preventDefault();
+            const overlay = document.getElementById('page-transition');
+            overlay.style.opacity = '1';
+            overlay.style.transform = 'scale(1)';
+            overlay.style.pointerEvents = 'all';
+            setTimeout(() => {
+                window.location.href = 'upload.html';
+            }, 600);
+        }
+        // Keyboard support
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && document.activeElement.onclick === navigateToUpload) {
+                navigateToUpload(e);
+            }
+        });
+    </script>
 
 </body>
 
