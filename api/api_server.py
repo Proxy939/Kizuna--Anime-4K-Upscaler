@@ -23,6 +23,15 @@ except ImportError:
     VideoProcessor = None
     print("WARNING: VideoProcessor not available - video processing will fail")
 
+# AI Model Registry
+try:
+    from runtime.ai.model_registry import MODELS, get_default_model, get_model
+    from runtime.ai.ai_inference import get_device_info
+    AI_AVAILABLE = True
+except ImportError as e:
+    print(f"WARNING: AI models not available - {e}")
+    AI_AVAILABLE = False
+
 from .schemas import UploadResponse, ProcessRequest, StatusResponse, ErrorResponse, JobState
 from .job_manager import JobManager
 
@@ -163,3 +172,23 @@ def get_result(job_id: str):
         raise HTTPException(404, detail="Result not ready")
         
     return FileResponse(job.output_path, filename=job.output_path.name)
+
+@app.get("/api/models")
+def list_models():
+    """Return available AI models from registry."""
+    if not AI_AVAILABLE:
+        return {"models": [], "default": None, "ai_available": False}
+    
+    return {
+        "models": list(MODELS.values()),
+        "default": get_default_model()["key"] if get_default_model() else None,
+        "ai_available": True
+    }
+
+@app.get("/api/device")
+def get_device():
+    """Return GPU/CPU device information."""
+    if not AI_AVAILABLE:
+        return {"device": "none", "ai_available": False}
+    
+    return get_device_info()
