@@ -38,7 +38,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="D:\college\Projects\Kizuna (絆)\venv"
+VIRTUAL_ENV="D:\college\Projects\Kizuna Anime 4K Upscaler\venv"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"
