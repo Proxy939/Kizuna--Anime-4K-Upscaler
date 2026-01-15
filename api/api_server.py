@@ -12,16 +12,16 @@ from fastapi.middleware.cors import CORSMiddleware
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.append(str(PROJECT_ROOT))
 
-# Backend Imports (Assume Correctness)
+# Backend Imports - Core Dependencies (MUST be available at startup)
+from PIL import Image
+from core.pipeline import KizunaSRPipeline, PipelineConfig
+
+# Optional imports (will warn if unavailable)
 try:
-    from core.pipeline import KizunaSRPipeline, PipelineConfig
-    from PIL import Image
-    # Video support might need optional import handling if runtime dependencies vary
-    from runtime.video.video_core import VideoProcessor 
+    from runtime.video.video_core import VideoProcessor
 except ImportError:
-    # Fallback/Mock for environment where backend deps aren't fully installed yet
-    # But instruction says "Assume backend works". We'll proceed.
-    pass
+    VideoProcessor = None
+    print("WARNING: VideoProcessor not available - video processing will fail")
 
 from .schemas import UploadResponse, ProcessRequest, StatusResponse, ErrorResponse, JobState
 from .job_manager import JobManager
@@ -71,11 +71,13 @@ def process_job(job_id: str, mode: str, scale: int):
             job_manager.update_progress(job_id, 10)
             
             config = PipelineConfig()
-            config.use_ai = True
-            config.scale_factor = scale
+            config.use_ai = False  # Video processing uses shader-only for now
+            config.shader_scale = scale
             
             processor = VideoProcessor(config)
+            job_manager.update_progress(job_id, 40)
             processor.process_video(str(input_path), str(output_path))
+            job_manager.update_progress(job_id, 90)
             
             job_manager.set_output(job_id, output_path)
             
@@ -87,13 +89,20 @@ def process_job(job_id: str, mode: str, scale: int):
             job_manager.update_progress(job_id, 20)
             
             input_image = Image.open(input_path).convert("RGB")
+            job_manager.update_progress(job_id, 30)
             
             config = PipelineConfig()
-            config.use_ai = True
-            config.scale_factor = scale
+            # AI mode: auto-detect based on model existence
+            # For now, use shader-only (no AI model in project)
+            config.use_ai = False
+            config.shader_scale = scale
+            job_manager.update_progress(job_id, 40)
             
             pipeline = KizunaSRPipeline(config)
+            job_manager.update_progress(job_id, 50)
+            
             result = pipeline.process_frame(input_image)
+            job_manager.update_progress(job_id, 90)
             
             result.save(output_path)
             job_manager.set_output(job_id, output_path)
