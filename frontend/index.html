@@ -351,8 +351,28 @@
 
             <!-- Upload Status Display (appears after upload) -->
             <div id="upload-status"
-                style="display: none; margin-top: 20px; text-align: center; font-family: 'Space Mono', monospace; font-size: 12px; color: rgba(255,255,255,0.7);">
-                <span id="status-text">Uploading...</span>
+                style="display: none; margin-top: 32px; text-align: center; font-family: 'Space Mono', monospace;">
+
+                <!-- Status Text -->
+                <div id="status-text"
+                    style="font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: rgba(255,255,255,0.6); margin-bottom: 12px;">
+                    Uploading...
+                </div>
+
+                <!-- Progress Bar Container -->
+                <div
+                    style="width: 240px; height: 2px; background: rgba(255,255,255,0.1); margin: 0 auto; position: relative; border-radius: 1px; overflow: hidden;">
+                    <!-- Progress Fill -->
+                    <div id="progress-fill"
+                        style="position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: linear-gradient(90deg, rgba(167, 139, 250, 0.8), rgba(139, 92, 246, 1)); box-shadow: 0 0 8px rgba(139, 92, 246, 0.6); transition: width 0.3s ease; border-radius: 1px;">
+                    </div>
+                </div>
+
+                <!-- Progress Percentage -->
+                <div id="progress-percent"
+                    style="font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 8px; letter-spacing: 0.1em;">
+                    0%
+                </div>
             </div>
         </div>
 
@@ -390,6 +410,20 @@
         let statusPollInterval = null;
 
         /**
+         * Update progress bar and percentage display.
+         * @param {number} percent - Progress percentage (0-100)
+         */
+        function updateProgress(percent) {
+            const progressFill = document.getElementById('progress-fill');
+            const progressPercent = document.getElementById('progress-percent');
+
+            if (progressFill && progressPercent) {
+                progressFill.style.width = `${percent}%`;
+                progressPercent.textContent = `${Math.round(percent)}%`;
+            }
+        }
+
+        /**
          * Handle file upload when user selects a file.
          * @param {HTMLInputElement} input - The file input element
          */
@@ -402,7 +436,8 @@
 
             // Show status
             statusDiv.style.display = 'block';
-            statusText.textContent = 'Uploading...';
+            statusText.textContent = 'Uploading file...';
+            updateProgress(0);
 
             try {
                 // Step 1: Upload file
@@ -422,7 +457,8 @@
                 const uploadData = await uploadResponse.json();
                 currentJobId = uploadData.job_id;
 
-                statusText.textContent = 'Processing...';
+                statusText.textContent = 'AI processing in progress';
+                updateProgress(10);
 
                 // Step 2: Start processing
                 const isVideo = file.type.startsWith('video/');
@@ -476,21 +512,24 @@
 
                     switch (status.state) {
                         case 'queued':
-                            statusText.textContent = 'Queued...';
+                            statusText.textContent = 'Queued for processing';
+                            updateProgress(15);
                             break;
                         case 'processing':
-                            statusText.textContent = `Processing... ${status.progress}%`;
+                            statusText.textContent = 'AI processing in progress';
+                            updateProgress(status.progress);
                             break;
                         case 'completed':
                             clearInterval(statusPollInterval);
-                            statusText.textContent = 'Complete! Downloading...';
-                            statusText.style.color = '#69db7c';
-                            downloadResult(currentJobId);
+                            statusText.textContent = 'Processing complete';
+                            statusText.style.color = 'rgba(105, 219, 124, 0.9)';
+                            updateProgress(100);
+                            setTimeout(() => downloadResult(currentJobId), 500);
                             break;
                         case 'failed':
                             clearInterval(statusPollInterval);
-                            statusText.textContent = `Failed: ${status.error || 'Unknown error'}`;
-                            statusText.style.color = '#ff6b6b';
+                            statusText.textContent = 'Processing paused';
+                            statusText.style.color = 'rgba(255, 107, 107, 0.8)';
                             break;
                     }
                 } catch (error) {
@@ -533,11 +572,13 @@
                 // Update status
                 const statusText = document.getElementById('status-text');
                 statusText.textContent = 'Downloaded!';
+                statusText.style.color = 'rgba(105, 219, 124, 0.9)';
 
                 // Hide status after 3 seconds
                 setTimeout(() => {
                     document.getElementById('upload-status').style.display = 'none';
-                    statusText.style.color = 'rgba(255,255,255,0.7)';
+                    statusText.style.color = 'rgba(255,255,255,0.6)';
+                    updateProgress(0);
                 }, 3000);
 
             } catch (error) {
