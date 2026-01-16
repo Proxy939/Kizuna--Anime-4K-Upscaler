@@ -941,7 +941,7 @@ class StatusResponse(BaseModel):
 ### Prerequisites
 
 #### Hardware Requirements
-- Minimum : **GPU**: NVIDIA GeForce GTX 1060 (6GB) or better
+- Minimum : **GPU**: NVIDIA GeForce GPU with minimum 2gb vram or better
   - Recommended: RTX 3060/4070 or higher
   - VRAM: Minimum 1GB, 
           Recommended 8GB
