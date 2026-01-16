@@ -28,8 +28,12 @@ try:
     from runtime.ai.model_registry import MODELS, get_default_model, get_model
     from runtime.ai.ai_inference import get_device_info
     AI_AVAILABLE = True
+    print(f"[SERVER] ✅ AI available: {len(MODELS)} models, Device: {get_device_info().get('device')}")
 except ImportError as e:
+    import traceback
     print(f"WARNING: AI models not available - {e}")
+    print("Full traceback:")
+    traceback.print_exc()
     AI_AVAILABLE = False
 
 from .schemas import UploadResponse, ProcessRequest, StatusResponse, ErrorResponse, JobState
@@ -60,7 +64,7 @@ job_manager = JobManager()
 MAX_FILE_SIZE = 512 * 1024 * 1024
 ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "video/mp4"]
 
-def process_job(job_id: str, mode: str, scale: int):
+def process_job(job_id: str, mode: str, scale: int, model_key: Optional[str] = None, enhance: bool = False):
     """Background processing task that calls existing backend code."""
     job_manager.update_state(job_id, JobState.PROCESSING)
     job_manager.update_progress(job_id, 0)
@@ -101,13 +105,44 @@ def process_job(job_id: str, mode: str, scale: int):
             job_manager.update_progress(job_id, 30)
             
             config = PipelineConfig()
-            # AI mode: auto-detect based on model existence
-            # For now, use shader-only (no AI model in project)
-            config.use_ai = False
-            config.shader_scale = scale
+            
+            # Configure AI Mode
+            if model_key and AI_AVAILABLE:
+                model_config = get_model(model_key)
+                if model_config:
+                    model_path = Path("models") / model_config["filename"]
+                    if model_path.exists():
+                        config.use_ai = True
+                        config.ai_model_path = model_path
+                        config.scale_factor = model_config["scale"]
+                        print(f"[Backend] AI Mode Enabled: {model_config['label']}")
+                    else:
+                        print(f"[Backend] WARNING: Model file not found: {model_path}")
+                        print(f"[Backend] Falling back to Shader Mode (CPU)")
+                        config.use_ai = False
+                        config.shader_scale = scale
+                else:
+                    print(f"[Backend] Invalid model key: {model_key}, falling back to shader")
+                    config.use_ai = False
+                    config.shader_scale = scale
+            else:
+                # Shader Mode (Default)
+                config.use_ai = False
+                config.shader_scale = scale
+            
+            # Configure optional Anime4K enhancement
+            config.apply_enhancement = enhance if 'enhance' in locals() else False
+                
             job_manager.update_progress(job_id, 40)
             
             pipeline = KizunaSRPipeline(config)
+            
+            # Helper callback for progress (since pipeline might block)
+            # Real-ESRGAN engine supports stage-based callbacks via ai_inference.py wrapper
+            # But KizunaSRPipeline might need updates to pass it through.
+            # For now, we rely on the staged updates in ai_inference.py if passed directly,
+            # but KizunaSRPipeline wraps it.
+            
             job_manager.update_progress(job_id, 50)
             
             result = pipeline.process_frame(input_image)
@@ -154,7 +189,7 @@ def trigger_process(req: ProcessRequest, tasks: BackgroundTasks):
     if not job:
         raise HTTPException(404, detail="Job not found")
         
-    tasks.add_task(process_job, req.job_id, req.mode, req.scale)
+    tasks.add_task(process_job, req.job_id, req.mode, req.scale, req.model, req.enhance)
     
     return StatusResponse(state=job.state, progress=job.progress)
 

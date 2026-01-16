@@ -1,19 +1,24 @@
 """
-Real-ESRGAN AI Inference Module
+Real-ESRGAN AI Inference Engine
 ================================
-Production-ready Real-ESRGAN integration with GPU/CPU support.
+Handles Real-ESRGAN model loading and inference with GPU/CPU support.
+
+Color Preservation: Processes only Y (lum
+
+inance) through neural network,
+upscales Cb/Cr chrominance with bicubic for zero color drift.
 """
 
-import os
-from pathlib import Path
-from typing import Optional, Callable
+import torch
 import numpy as np
 from PIL import Image
+from pathlib import Path
+from typing import Optional, Callable
 
 try:
-    import torch
     from realesrgan import RealESRGANer
     from basicsr.archs.rrdbnet_arch import RRDBNet
+    _REALESRGAN_AVAILABLE = True
 except ImportError as e:
     raise ImportError(
         "Real-ESRGAN dependencies not installed. "
@@ -22,60 +27,47 @@ except ImportError as e:
 
 
 class RealESRGANInference:
-    """Real-ESRGAN inference engine with tile-based processing."""
+    """Real-ESRGAN inference engine with strict color preservation."""
     
     def __init__(
         self,
-        model_path: str,
-        model_name: str = "realesrgan-animevideov3",
-        scale: int = 4,
-        tile_size: int = 256,
+        model_path: Path,
+        tile_size: int = 512,
         tile_pad: int = 10,
-        gpu_id: Optional[int] = None
+        scale_factor: int = 4,
+        use_gpu: bool = True
     ):
         """
-        Initialize Real-ESRGAN upscaler.
+        Initialize Real-ESRGAN inference engine.
         
         Args:
             model_path: Path to .pth model file
-            model_name: Model architecture name
-            scale: Upscale factor (2 or 4)
-            tile_size: Tile size for processing (256 recommended)
-            tile_pad: Padding for tiles (10 recommended)
-            gpu_id: GPU device ID (None = auto-detect)
+            tile_size: Tile size for processing large images
+            tile_pad: Padding for tiles
+            scale_factor: Upscaling factor (2 or 4)
+            use_gpu: Use GPU if available
         """
-        self.model_path = Path(model_path)
-        self.model_name = model_name
-        self.scale = scale
+        self.model_path = model_path
         self.tile_size = tile_size
         self.tile_pad = tile_pad
+        self.scale = scale_factor
+        self.use_gpu = use_gpu and torch.cuda.is_available()
         
-        # Validate model file
-        if not self.model_path.exists():
+        # Validate model file exists
+        if not model_path.exists():
             raise FileNotFoundError(f"Model not found: {model_path}")
         
-        # Detect device
-        self.device, self.use_gpu = self._detect_device(gpu_id)
+        # Set device
+        self.device = 'cuda' if self.use_gpu else 'cpu'
         
-        # Initialize model
+        # Extract model name
+        self.model_name = model_path.stem
+        
+        # Load model
         self.upsampler = self._load_model()
         
-        print(f"[AI] Device: {self.device}")
-        print(f"[AI] Loading model: {self.model_path.name}")
-        print(f"[AI] Tile: {tile_size}x{tile_size}, Pad: {tile_pad}")
-    
-    def _detect_device(self, gpu_id: Optional[int]) -> tuple:
-        """Detect CUDA availability and set device."""
-        if torch.cuda.is_available():
-            device_id = gpu_id if gpu_id is not None else 0
-            device = f"cuda:{device_id}"
-            gpu_name = torch.cuda.get_device_name(device_id)
-            print(f"[AI] GPU acceleration enabled: {gpu_name}")
-            return device, True
-        else:
-            device = "cpu"
-            print(f"[AI] CPU fallback (slower)")
-            return device, False
+        print(f"[AI] Real-ESRGAN loaded: {self.model_name}")
+        print(f"[AI] Device: {self.device.upper()}{' (GPU acceleration enabled)' if self.use_gpu else ''}")
     
     def _load_model(self):
         """Load Real-ESRGAN model."""
@@ -121,77 +113,110 @@ class RealESRGANInference:
         progress_callback: Optional[Callable[[int], None]] = None
     ) -> Image.Image:
         """
-        Upscale image using Real-ESRGAN.
+        Upscale image with STRICT COLOR PRESERVATION.
         
-        Args:
-            image: Input PIL Image (RGB)
-            progress_callback: Optional callback(percent) for progress updates
+        Strategy:
+        1. Convert RGB → YCbCr (separate luminance from color)
+        2. Process ONLY Y channel through Real-ESRGAN
+        3. Upscale Cb/Cr with bicubic (NO neural processing)
+        4. Recombine YCbCr → RGB
         
-        Returns:
-            Upscaled PIL Image (RGB)
+        Result: ZERO color drift, only spatial resolution improves.
         """
-        # Stage-based progress (Real-ESRGAN doesn't expose real progress)
         if progress_callback:
-            progress_callback(20)  # Model loading done, inference starting
+            progress_callback(20)
         
-        # Convert PIL to numpy
-        img_np = np.array(image)
-        
-        if progress_callback:
-            progress_callback(40)  # Preprocessing done
-        
-        # Run Real-ESRGAN inference (tile-based internally)
-        try:
-            output_np, _ = self.upsampler.enhance(img_np, outscale=self.scale)
-        except Exception as e:
-            raise RuntimeError(f"Real-ESRGAN inference failed: {e}")
+        # ===============================================================
+        # STEP 1: Convert to YCbCr
+        # ===============================================================
+        img_ycbcr = image.convert('YCbCr')
+        y_channel, cb_channel, cr_channel = img_ycbcr.split()
         
         if progress_callback:
-            progress_callback(80)  # Inference done
+            progress_callback(30)
         
-        # Convert numpy to PIL
-        output_img = Image.fromarray(output_np, mode='RGB')
+        # ===============================================================
+        # STEP 2: Process Y channel through Real-ESRGAN
+        # ===============================================================
+        # Convert Y to RGB format for Real-ESRGAN (expects 3 channels)
+        y_rgb = Image.merge('RGB', (y_channel, y_channel, y_channel))
+        y_array = np.array(y_rgb)
         
         if progress_callback:
-            progress_callback(90)  # Post-processing done
+            progress_callback(40)
         
-        return output_img
+        # Real-ESRGAN processing
+        output_y, _ = self.upsampler.enhance(y_array, outscale=self.scale)
+        
+        if progress_callback:
+            progress_callback(70)
+        
+        # Extract first channel (all 3 are identical grayscale)
+        output_y_array = np.clip(output_y, 0, 255).astype(np.uint8)
+        y_upscaled = Image.fromarray(output_y_array[:, :, 0], mode='L')
+        
+        # ===============================================================
+        # STEP 3: Upscale Cb/Cr with BICUBIC (preserve color perfectly)
+        # ===============================================================
+        target_size = y_upscaled.size
+        cb_upscaled = cb_channel.resize(target_size, Image.BICUBIC)
+        cr_upscaled = cr_channel.resize(target_size, Image.BICUBIC)
+        
+        if progress_callback:
+            progress_callback(85)
+        
+        # ===============================================================
+        # STEP 4: Recombine and convert back to RGB
+        # ===============================================================
+        img_upscaled_ycbcr = Image.merge('YCbCr', (y_upscaled, cb_upscaled, cr_upscaled))
+        img_upscaled_rgb = img_upscaled_ycbcr.convert('RGB')
+        
+        if progress_callback:
+            progress_callback(100)
+        
+        return img_upscaled_rgb
 
 
-# Legacy compatibility wrapper
 class AIInferenceEngine:
-    """Legacy wrapper for backward compatibility."""
+    """High-level AI inference engine for the pipeline."""
     
     def __init__(
         self,
-        model_path: str,
-        tile_size: int = 256,
+        model_path: Path,
+        tile_size: int = 512,
         tile_overlap: int = 10,
         scale_factor: int = 4
     ):
-        """Initialize with Real-ESRGAN backend."""
+        """Initialize AI inference engine."""
+        self.model_path = model_path
+        self.tile_size = tile_size
+        self.scale_factor = scale_factor
+        
+        # Initialize Real-ESRGAN engine
         self.engine = RealESRGANInference(
             model_path=model_path,
-            scale=scale_factor,
             tile_size=tile_size,
-            tile_pad=tile_overlap
+            tile_pad=tile_overlap,
+            scale_factor=scale_factor,
+            use_gpu=True
         )
     
-    def upscale(self, image: Image.Image) -> Image.Image:
-        """Upscale image."""
-        return self.engine.upscale(image)
+    def upscale(self, img: Image.Image) -> Image.Image:
+        """Upscale image using Real-ESRGAN."""
+        return self.engine.upscale(img)
 
 
 def get_device_info() -> dict:
     """Get GPU/CPU device information."""
-    info = {
-        "cuda_available": torch.cuda.is_available(),
-        "device": "cpu"
+    if not torch.cuda.is_available():
+        return {
+            "device": "cpu",
+            "cuda_available": False
+        }
+    
+    return {
+        "device": "cuda",
+        "cuda_available": True,
+        "gpu_name": torch.cuda.get_device_name(0),
+        "gpu_count": torch.cuda.device_count()
     }
-    
-    if info["cuda_available"]:
-        info["device"] = "cuda"
-        info["gpu_name"] = torch.cuda.get_device_name(0)
-        info["gpu_count"] = torch.cuda.device_count()
-    
-    return info

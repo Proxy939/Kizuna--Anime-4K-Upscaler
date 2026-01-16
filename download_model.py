@@ -1,39 +1,40 @@
-"""Download Real-ESRGAN model file from GitHub releases."""
+import os
 import requests
-from pathlib import Path
+from tqdm import tqdm
 
-MODEL_URL = "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesrgan-animevideov3.pth"
-OUTPUT_PATH = Path("models/realesrgan-animevideov3.pth")
+# Updated to v0.2.5.0 and RealESRGAN_x4plus_anime_6B (saved as standard name)
+URL = "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/RealESRGAN_x4plus_anime_6B.pth"
+OUT_PATH = os.path.join("models", "RealESRGAN_x4plus.pth")
 
-print(f"Downloading from: {MODEL_URL}")
-print(f"Saving to: {OUTPUT_PATH}")
+os.makedirs("models", exist_ok=True)
+
+print(f"Downloading Real-ESRGAN x4+ Anime (Default ⭐)...")
+print(f"Source: {URL}")
+print(f"Target: {OUT_PATH}")
 
 try:
-    # Stream download with progress
-    response = requests.get(MODEL_URL, stream=True, allow_redirects=True)
+    response = requests.get(URL, stream=True, timeout=30)
     response.raise_for_status()
-    
-    total_size = int(response.headers.get('content-length', 0))
-    print(f"File size: {total_size / 1024 / 1024:.1f} MB")
-    
-    OUTPUT_PATH.parent.mkdir(exist_ok=True)
-    
-    with open(OUTPUT_PATH, 'wb') as f:
-        downloaded = 0
-        for chunk in response.iter_content(chunk_size=8192):
+
+    total_size = int(response.headers.get("content-length", 0))
+    chunk_size = 1024 * 1024  # 1 MB
+
+    with open(OUT_PATH, "wb") as f, tqdm(
+        desc="Downloading",
+        total=total_size,
+        unit="B",
+        unit_scale=True,
+        unit_divisor=1024,
+    ) as bar:
+        for chunk in response.iter_content(chunk_size=chunk_size):
             if chunk:
                 f.write(chunk)
-                downloaded += len(chunk)
-                if total_size > 0:
-                    percent = (downloaded / total_size) * 100
-                    print(f"\rProgress: {percent:.1f}%", end='', flush=True)
-    
-    print(f"\n✅ Download complete: {OUTPUT_PATH}")
-    print(f"File size: {OUTPUT_PATH.stat().st_size / 1024 / 1024:.1f} MB")
-    
-except requests.exceptions.RequestException as e:
+                bar.update(len(chunk))
+
+    print("\n✅ Download complete:", OUT_PATH)
+
+except Exception as e:
     print(f"\n❌ Download failed: {e}")
-    print("\nPlease download manually:")
-    print("1. Visit: https://github.com/xinntao/Real-ESRGAN/releases/tag/v0.2.5.0")
-    print("2. Download: realesrgan-animevideov3.pth")
-    print(f"3. Save to: {OUTPUT_PATH.absolute()}")
+    print("\n⚠️  Manual Download Required:")
+    print(f"1. Download: {URL}")
+    print(f"2. Save as: {os.path.abspath(OUT_PATH)}")

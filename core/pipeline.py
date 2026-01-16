@@ -21,7 +21,9 @@ from core.shader_stages import (
     stage_temporal_stabilization,
     linear_to_srgb
 )
-from runtime.ai.ai_inference import AIInferenceEngine
+# Lazy import for AI - only load when actually needed
+# This prevents crashes when uvicorn spawns subprocesses on Windows without proper venv inheritance
+# from runtime.ai.ai_inference import AIInferenceEngine
 
 
 class PipelineConfig:
@@ -40,16 +42,20 @@ class PipelineConfig:
         self.ai_tile_overlap: int = 64
         self.ai_scale: int = 2
         
-        # Enhancement parameters
-        self.contrast_boost: float = 1.1
-        self.saturation_boost: float = 1.05
-        self.sharpening: float = 0.3
-        self.line_darkening: float = 0.15
+        # Enhancement parameters - SET TO NEUTRAL (NO COLOR CHANGES)
+        # These were causing color grading shifts in output
+        self.contrast_boost: float = 1.0       # 1.0 = no change (was 1.1)
+        self.saturation_boost: float = 1.0     # 1.0 = no change (was 1.05)
+        self.sharpening: float = 0.0           # 0.0 = disabled (was 0.3)
+        self.line_darkening: float = 0.0       # 0.0 = disabled (was 0.15)
         
         # Temporal stabilization
         self.enable_temporal: bool = False
         self.temporal_weight: float = 0.15
         self.motion_threshold: float = 0.1
+        
+        # Optional post-processing enhancement (Anime4K-style)
+        self.apply_enhancement: bool = False
     
     def as_dict(self) -> Dict[str, Any]:
         """Export configuration as dictionary."""
@@ -92,6 +98,15 @@ class KizunaSRPipeline:
         if config.use_ai:
             if config.ai_model_path is None:
                 raise ValueError("AI mode enabled but no model path provided")
+            
+            # Lazy import - only when actually needed
+            try:
+                from runtime.ai.ai_inference import AIInferenceEngine
+            except ImportError as e:
+                raise ImportError(
+                    "AI mode requested but Real-ESRGAN dependencies not installed. "
+                    "Run: pip install realesrgan==0.3.0 basicsr==1.4.2 facexlib gfpgan torch torchvision"
+                ) from e
             
             self.ai_engine = AIInferenceEngine(
                 model_path=config.ai_model_path,
@@ -155,6 +170,31 @@ class KizunaSRPipeline:
                 edge_map,
                 scale=self.config.shader_scale
             )
+        
+        # =======================================================================
+        # OPTIONAL: Anime4K Post-Processing Enhancement
+        # =======================================================================
+        # Applied ONLY if enhance flag is enabled
+        # Must run AFTER upscaling (AI or shader), BEFORE shader enhancements
+        
+        if self.config.apply_enhancement:
+            print("[Pipeline] OPTIONAL: Anime4K Line Enhancement")
+            try:
+                from runtime.enhancement.anime4k_enhance import apply_anime4k_enhance
+                
+                # Convert to PIL for enhancement
+                upscaled_pil = Image.fromarray((upscaled * 255).astype(np.uint8), mode='RGB')
+                
+                # Apply conservative line enhancement
+                enhanced_pil = apply_anime4k_enhance(upscaled_pil, strength=0.15)
+                
+                # Convert back to float array
+                upscaled = np.array(enhanced_pil).astype(np.float32) / 255.0
+                
+                print("[Pipeline] Enhancement applied successfully")
+            except Exception as e:
+                print(f"[Pipeline] WARNING: Enhancement failed, continuing without it: {e}")
+                # Continue with non-enhanced output if enhancement fails
         
         # ======================================================================
         # Shader Post-Processing

@@ -92,6 +92,38 @@
                     <div class="text-white/30">Metallic</div>
                     <div class="flex items-center gap-2 mt-1">
                         <div class="w-12 h-1 bg-white/20"></div>
+                        <div class="processing-stats" id="processing-stats" style="display: none;">
+                            <div class="stat-item">
+                                <div class="stat-label">Model</div>
+                                <div class="stat-value" id="stat-model">-</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Time Elapsed</div>
+                                <div class="stat-value" id="stat-time">00:00</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">ETA</div>
+                                <div class="stat-value" id="stat-eta">--:--</div>
+                            </div>
+                        </div>
+
+                        <!-- AI Model Selector (New) -->
+                        <div id="ai-model-section"
+                            style="margin-top: 15px; text-align: left; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                            <label
+                                style="font-size: 12px; color: rgba(255,255,255,0.7); display: block; margin-bottom: 5px;">AI
+                                Model</label>
+                            <select id="model-select"
+                                style="width: 100%; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; outline: none;">
+                                <option value="" disabled selected>Loading models...</option>
+                            </select>
+                            <div id="device-info"
+                                style="font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 5px; text-align: right;">
+                                Checking device...
+                            </div>
+                        </div>
+
+                        <div class="progress-container" id="progress-container" style="display: none;"></div>
                         <span>14.3</span>
                     </div>
                 </div>
@@ -423,6 +455,56 @@
             }
         }
 
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchModels();
+            checkDevice();
+        });
+
+        async function fetchModels() {
+            try {
+                const response = await fetch(`${API_BASE}/api/models`);
+                const data = await response.json();
+
+                const select = document.getElementById('model-select');
+                select.innerHTML = '';
+
+                if (data.models.length === 0) {
+                    const option = document.createElement('option');
+                    option.text = "Shader Mode (No AI models found)";
+                    option.value = "";
+                    select.appendChild(option);
+                    return;
+                }
+
+                data.models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.key;
+                    option.textContent = model.label;
+                    if (model.default) option.selected = true;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error("Failed to fetch models:", error);
+            }
+        }
+
+        async function checkDevice() {
+            try {
+                const response = await fetch(`${API_BASE}/api/device`);
+                const data = await response.json();
+                const div = document.getElementById('device-info');
+
+                if (data.cuda_available) {
+                    div.innerHTML = `<span style="color: #69db7c">⚡ GPU Enabled: ${data.gpu_name}</span>`;
+                } else {
+                    div.innerHTML = `<span style="color: #ffd43b">⚠️ CPU Fallback (Slower)</span>`;
+                }
+            } catch (e) {
+                console.error("Device check failed:", e);
+            }
+        }
+
         /**
          * Handle file upload when user selects a file.
          * @param {HTMLInputElement} input - The file input element
@@ -462,13 +544,16 @@
 
                 // Step 2: Start processing
                 const isVideo = file.type.startsWith('video/');
+                const modelKey = document.getElementById('model-select').value;
+
                 const processResponse = await fetch(`${API_BASE}/api/process`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         job_id: currentJobId,
                         mode: isVideo ? 'video' : 'image',
-                        scale: 2
+                        scale: 2,
+                        model: modelKey // Pass selected model
                     })
                 });
 

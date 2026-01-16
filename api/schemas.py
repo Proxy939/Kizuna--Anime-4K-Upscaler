@@ -16,6 +16,8 @@ class ProcessRequest(BaseModel):
     job_id: str
     mode: Literal["image", "video"]
     scale: int = 2
+    model: Optional[str] = None
+    enhance: bool = False  # Optional Anime4K post-processing
 
 class StatusResponse(BaseModel):
     state: JobState

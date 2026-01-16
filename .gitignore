@@ -1,0 +1,35 @@
+# Python virtual environment
+venv/
+env/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# AI Model files (large binaries)
+models/*.pth
+models/*.onnx
+models/*.safetensors
+
+# Temporary files
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Output/uploads
+uploads/
+output/
+results/
+*.mp4
+*.avi
+*.mov
