@@ -1,6 +1,7 @@
 # Kizuna Anime 4K Upscaler
 
 A professional-grade, AI-powered anime upscaling system with **zero color drift guarantee** through innovative YCbCr luminance-only neural processing.
+{{Note: Its fully developed, just further improvements are needed in color preservation Pipeline😊}}
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.10-green.svg)
