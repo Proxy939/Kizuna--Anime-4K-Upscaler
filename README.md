@@ -940,11 +940,12 @@ class StatusResponse(BaseModel):
 ### Prerequisites
 
 #### Hardware Requirements
-- **GPU**: NVIDIA GeForce GTX 1060 (6GB) or better
-  - Recommended: RTX 3060/4060 or higher
-  - VRAM: Minimum 6GB, Recommended 8GB+
-- **RAM**: Minimum 16GB
-- **Storage**: 10GB free space
+- Minimum : **GPU**: NVIDIA GeForce GTX 1060 (6GB) or better
+  - Recommended: RTX 3060/4070 or higher
+  - VRAM: Minimum 1GB, 
+          Recommended 8GB
+- **RAM**: Minimum 4GB
+- **Storage**: 5GB free space
 
 #### Software Requirements
 - **OS**: Windows 10/11 (64-bit)
