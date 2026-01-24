@@ -340,40 +340,40 @@ graph LR
 
 ```mermaid
 graph TD
-    Start[Input: RGB Image<br/>1920x1080] --> Convert1[Convert RGB → YCbCr]
-    
-    Convert1 --> Split[Split Channels]
-    
-    Split -->|Extract| Y[Y Channel<br/>1920x1080<br/>Grayscale]
-    Split -->|Extract| Cb[Cb Channel<br/>1920x1080<br/>Blue Chroma]
-    Split -->|Extract| Cr[Cr Channel<br/>1920x1080<br/>Red Chroma]
-    
-    Y --> Y_RGB[Convert to Pseudo-RGB<br/>Y,Y,Y channels]
-    Y_RGB --> Y_Array[NumPy Array<br/>float32, [0-1]]
-    
-    Y_Array --> Tile{Image > 2K?}
-    Tile -->|Yes| TileProc[Tile-Based Processing<br/>512x512 tiles, 10px overlap]
-    Tile -->|No| Direct[Direct Processing]
-    
-    TileProc --> ESRGAN[Real-ESRGAN Inference<br/>RRDBNet 23-block]
+    StartNode["Input RGB Image<br/>1920 by 1080"] --> Convert1["Convert RGB to YCbCr"]
+
+    Convert1 --> Split["Split Channels"]
+
+    Split -->|Extract| Y["Y Channel<br/>1920 by 1080<br/>Grayscale"]
+    Split -->|Extract| Cb["Cb Channel<br/>1920 by 1080<br/>Blue Chroma"]
+    Split -->|Extract| Cr["Cr Channel<br/>1920 by 1080<br/>Red Chroma"]
+
+    Y --> Y_RGB["Convert to Pseudo RGB<br/>Y Y Y"]
+    Y_RGB --> Y_Array["NumPy Array<br/>Float32 Normalized"]
+
+    Y_Array --> TileCheck{"Image larger than 2K?"}
+    TileCheck -->|Yes| TileProc["Tile Based Processing<br/>512 by 512 Tiles<br/>10px Overlap"]
+    TileCheck -->|No| Direct["Direct Processing"]
+
+    TileProc --> ESRGAN["Real ESRGAN Inference<br/>RRDBNet 23 Block"]
     Direct --> ESRGAN
-    
-    ESRGAN -->|FP16 on GPU| Y_Up[Y Upscaled<br/>7680x4320<br/>High Detail]
-    
-    Cb --> Bicubic_Cb[Bicubic Interpolation<br/>Mathematical]
-    Cr --> Bicubic_Cr[Bicubic Interpolation<br/>Mathematical]
-    
-    Bicubic_Cb --> Cb_Up[Cb Upscaled<br/>7680x4320<br/>Smooth Color]
-    Bicubic_Cr --> Cr_Up[Cr Upscaled<br/>7680x4320<br/>Smooth Color]
-    
-    Y_Up --> Merge[Merge YCbCr Channels]
+
+    ESRGAN --> Y_Up["Upscaled Y Channel<br/>7680 by 4320"]
+
+    Cb --> Bicubic_Cb["Bicubic Interpolation"]
+    Cr --> Bicubic_Cr["Bicubic Interpolation"]
+
+    Bicubic_Cb --> Cb_Up["Upscaled Cb<br/>7680 by 4320"]
+    Bicubic_Cr --> Cr_Up["Upscaled Cr<br/>7680 by 4320"]
+
+    Y_Up --> Merge["Merge Y Cb Cr"]
     Cb_Up --> Merge
     Cr_Up --> Merge
-    
-    Merge --> Convert2[Convert YCbCr → RGB]
-    Convert2 --> Clamp[Clamp Values [0, 255]]
-    Clamp --> Output[Output: RGB Image<br/>7680x4320<br/>✅ Colors Preserved]
-    
+
+    Merge --> Convert2["Convert YCbCr to RGB"]
+    Convert2 --> Clamp["Clamp Values 0 to 255"]
+    Clamp --> OutputNode["Final RGB Image<br/>7680 by 4320<br/>Colors Preserved"]
+
     style Y fill:#ffffcc
     style Cb fill:#ccffff
     style Cr fill:#ffcccc
@@ -516,41 +516,41 @@ else:
 
 ```mermaid
 graph TD
-    Start[Upscaled Image] --> Analysis[Image Analysis Phase]
-    
-    Analysis --> CalcChroma[Calculate Chroma Variance<br/>var(Cb) + var(Cr)]
-    Analysis --> CalcEdge[Calculate Edge Density<br/>Sobel on Y channel]
-    
-    CalcChroma --> CheckChroma{Chroma Var<br/>< 800?}
-    CalcEdge --> CheckEdge{Edge Density<br/>> 0.05?}
-    
-    CheckChroma -->|No| Skip[Skip Enhancement<br/>Too colorful/complex]
-    CheckEdge -->|No| Skip2[Skip Enhancement<br/>Too flat/uniform]
-    
-    CheckChroma -->|Yes| Safe1[✓]
-    CheckEdge -->|Yes| Safe2[✓]
-    
-    Safe1 --> AdaptiveStrength
-    Safe2 --> AdaptiveStrength[Calculate Adaptive Strength]
-    
-    AdaptiveStrength --> Formula["Strength = 0.15 × (1 - CV/800) × (ED/0.15)<br/>Clamped [0.05, 0.15]"]
-    
-    Formula --> ApplyEnhance[Apply Luminance Enhancement<br/>Y only, edge-weighted]
-    
-    ApplyEnhance --> Validate[Delta-E Validation]
-    
-    Validate --> DeltaE[Compute CIEDE2000<br/>color difference]
-    
-    DeltaE --> CheckDelta{Mean ΔE < 1.0<br/>AND<br/>Max ΔE < 3.0?}
-    
-    CheckDelta -->|No| Fallback[Fallback: Return<br/>Unenhanced Image]
-    CheckDelta -->|Yes| Success[✅ Return<br/>Enhanced Image]
-    
-    Skip --> Fallback
-    Skip2 --> Fallback
-    
-    style Skip fill:#ffcccc
-    style Skip2 fill:#ffcccc
+    StartNode["Upscaled Image"] --> Analysis["Image Analysis Phase"]
+
+    Analysis --> CalcChroma["Calculate Chroma Variance<br/>Cb and Cr"]
+    Analysis --> CalcEdge["Calculate Edge Density<br/>Sobel on Y"]
+
+    CalcChroma --> CheckChroma{"Low chroma variance?"}
+    CalcEdge --> CheckEdge{"High edge density?"}
+
+    CheckChroma -->|No| SkipColor["Skip Enhancement<br/>Too colorful"]
+    CheckEdge -->|No| SkipFlat["Skip Enhancement<br/>Too flat"]
+
+    CheckChroma -->|Yes| Safe1["OK"]
+    CheckEdge -->|Yes| Safe2["OK"]
+
+    Safe1 --> Adaptive["Calculate Adaptive Strength"]
+    Safe2 --> Adaptive
+
+    Adaptive --> Formula["Adaptive strength formula<br/>Clamped range"]
+
+    Formula --> Enhance["Apply Luminance Enhancement<br/>Y channel only"]
+
+    Enhance --> Validate["Delta-E Validation"]
+
+    Validate --> DeltaE["Compute CIEDE2000"]
+
+    DeltaE --> CheckDelta{"Delta-E within limits?"}
+
+    CheckDelta -->|No| Fallback["Return Original Image"]
+    CheckDelta -->|Yes| Success["Return Enhanced Image"]
+
+    SkipColor --> Fallback
+    SkipFlat --> Fallback
+
+    style SkipColor fill:#ffcccc
+    style SkipFlat fill:#ffcccc
     style Fallback fill:#ffe6cc
     style Success fill:#ccffcc
 ```
