@@ -1,7 +1,8 @@
 # Kizuna Anime 4K Upscaler
 
 A professional-grade, AI-powered anime upscaling system with **zero color drift guarantee** through innovative YCbCr luminance-only neural processing.
-{{Note: Its fully developed, just further improvements are needed in color preservation Pipeline😊}}
+
+{{Note: Its fully developed, just further improvements are needed in color preservation Pipeline😊😊😊}}
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.10-green.svg)
@@ -940,11 +941,12 @@ class StatusResponse(BaseModel):
 ### Prerequisites
 
 #### Hardware Requirements
-- **GPU**: NVIDIA GeForce GTX 1060 (6GB) or better
-  - Recommended: RTX 3060/4060 or higher
-  - VRAM: Minimum 6GB, Recommended 8GB+
-- **RAM**: Minimum 16GB
-- **Storage**: 10GB free space
+- Minimum : **GPU**: NVIDIA GeForce GPU with minimum 2gb vram or better
+  - Recommended: RTX 3060/4070 or higher
+  - VRAM: Minimum 1GB, 
+          Recommended 8GB
+- **RAM**: Minimum 4GB
+- **Storage**: 5GB free space
 
 #### Software Requirements
 - **OS**: Windows 10/11 (64-bit)
